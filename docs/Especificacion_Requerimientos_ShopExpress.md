@@ -166,7 +166,11 @@ Diagrama de componentes UML. La bola marca la interfaz que provee cada servicio,
 | S-04 | "Pedido único" significa que un reintento no crea otra compra. | Un identificador único no alcanza si el cliente reintenta después de perder la respuesta. |
 | S-05 | El pago se simula. | La consigna no pide una pasarela real. |
 
-**Acuerdos confirmados:** el trabajo es individual, y Redis puede usarse con cualquier rol, siempre que se usen dos motores NoSQL.
+**Acuerdos confirmados:**
+
+- El trabajo es individual.
+- Redis puede usarse con cualquier rol, siempre que se usen dos motores NoSQL.
+- La demo de la defensa se hace con Postman, sin interfaz gráfica (confirmado por el tutor el 29/10/2026).
 
 **Pendientes**
 
@@ -178,7 +182,7 @@ Diagrama de componentes UML. La bola marca la interfaz que provee cada servicio,
 ### 2.6. Fuera de alcance
 
 - Autenticación y autorización de usuarios.
-- Interfaz web. Si se agregara, sus textos irían en español.
+- Interfaz web: el tutor confirmó que la demo se hace con Postman.
 - Pasarela de pago real.
 - Devoluciones de pagos ya capturados.
 - Resolución de pedidos con `requiresAttention`: se hace a mano.
