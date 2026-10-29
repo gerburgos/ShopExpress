@@ -171,12 +171,12 @@ Diagrama de componentes UML. La bola marca la interfaz que provee cada servicio,
 - El trabajo es individual.
 - Redis puede usarse con cualquier rol, siempre que se usen dos motores NoSQL.
 - La demo de la defensa se hace con Postman, sin interfaz gráfica (confirmado por el tutor el 29/10/2026).
+- El jueves 5/11 es una pre-entrega con un avance parcial, y la entrega final es el jueves 12/11 (confirmado por el tutor el 29/10/2026). El plazo se puede extender, pero el estudiante decidió no hacerlo.
 
 **Pendientes**
 
 | ID | Pregunta | Impacto | Prioridad |
 | --- | --- | --- | --- |
-| P-01 | ¿La entrega es el 5/11 y la defensa el 12/11, o hay que defender el 5? | Si la entrega es el 12, hay una semana más para P3. Mientras tanto, se planifica para el 5. | Alta |
 | P-02 | ¿El docente acepta los diagramas que siguen en Mermaid (Chain of Responsibility y estados), o los quiere como imagen? | Si no los acepta, se pasan a draw.io como los de arquitectura y SAGA. | Baja |
 
 ### 2.6. Fuera de alcance
@@ -259,7 +259,7 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 - Es eventualmente consistente: una compra recién confirmada puede tardar en aparecer.
 - **Respuestas:** 200 con la lista, que puede estar vacía; 404 si el usuario no existe.
 
-**RF-08. Exportar usuarios anonimizados.** `GET /api/users/export?format=json` (o `csv`). Opcional en la consigna, P3.
+**RF-08. Exportar usuarios anonimizados (seudonimización).** `GET /api/users/export?format=json` (o `csv`). Opcional en la consigna, P3.
 - El documento y el email salen seudonimizados con un HMAC con clave secreta. No alcanza con un hash simple: un documento de 8 dígitos tiene 10⁸ valores posibles y se revierte probándolos todos.
 - No se exportan las direcciones completas.
 - **Respuesta:** 200.
@@ -825,22 +825,26 @@ Refs: D-04, INT-01, CA-07
 
 ## Anexo B. Plan de incrementos
 
-El plan asume que la entrega es el jueves 5/11/2026 (P-01). Las fechas son una guía y se ajustan a la disponibilidad real.
+La pre-entrega del jueves 5/11 muestra un avance parcial: la compra funcionando. La entrega final es el jueves 12/11 (2.5). Las fechas son una guía y se ajustan a la disponibilidad real.
 
 | ID | Fecha objetivo | Contenido | Cierra |
 | --- | --- | --- | --- |
-| INC-0 | Dom 25/10 | Consultar P-01 al docente. Crear el repositorio y los tres proyectos Spring Boot, y el `docker-compose.yml` con MongoDB (`rs0` inicializado) y Redis. | CA-19, ENT-01 |
-| INC-1 | Lun 26 a mar 27/10 | RF-01 a RF-04, RF-09 y RF-11, con validaciones, índices y DTO. Verificar el tipo de los importes en MongoDB. Colección Postman inicial. | CA-01, CA-02, parte de CA-13 y de CA-18 |
-| INC-2 | Mié 28/10 | Caché con Redis, `LoggingCacheErrorHandler` e invalidación. Medición con y sin caché. | CA-11, CA-14, CA-18, la parte de caché de CA-16 |
-| INC-3 | Jue 29 a vie 30/10 | INT-01 a INT-03, con transacción y reintento. RF-10. Script de concurrencia. | CA-17, base de CA-04 y CA-07 |
-| INC-4 | Sáb 31/10 a lun 2/11 | RF-05 y RF-06: cadena, orquestador, pasarela simulada (autorizar, capturar y reversar), idempotencia, historial del pago y reintentos dentro de la solicitud. | CA-03 a CA-08, CA-10, CA-16, CA-20 |
-| INC-5 | Mar 3/11 | INT-04, RF-07, acciones pendientes, `requiresAttention` y `SagaRecoveryJob` con lease. | CA-12, CA-15, CA-21, CA-22 |
-| INC-6 | Mié 4/11 | README, diagramas, colección final con Newman y ensayo cronometrado de la demo. | ENT-02 a ENT-05, ENT-07, ENT-08 |
-| — | Jue 5/11 | Entrega. | — |
+| INC-0 | Mié 28/10 (terminado) | Crear el repositorio y los tres proyectos Spring Boot, y el `docker-compose.yml` con MongoDB (`rs0` inicializado) y Redis. | CA-19, ENT-01 |
+| INC-1 | Jue 29 a vie 30/10 | RF-01 a RF-04, RF-09 y RF-11, con validaciones, índices y DTO. Verificar el tipo de los importes en MongoDB. Colección Postman inicial. | CA-01, CA-02, parte de CA-13 y de CA-18 |
+| INC-2 | Sáb 31/10 | Caché con Redis, `LoggingCacheErrorHandler` e invalidación. Medición con y sin caché. | CA-11, CA-14, CA-18, la parte de caché de CA-16 |
+| INC-3 | Dom 1 a lun 2/11 | INT-01 a INT-03, con transacción y reintento. RF-10. Script de concurrencia. | CA-17, base de CA-04 y CA-07 |
+| INC-4 | Mar 3 a mié 4/11 | RF-05 y RF-06: cadena, orquestador y pasarela simulada (autorizar, capturar y reversar), con el historial del pago. | CA-03, CA-04, CA-06, CA-07, CA-10, CA-16 |
+| — | Jue 5/11 | Pre-entrega: se muestra la compra aprobada, el pago rechazado y la falta de stock. | — |
+| INC-5 | Vie 6 a sáb 7/11 | Idempotencia, reintentos dentro de la solicitud, INT-04, RF-07, acciones pendientes, `requiresAttention` y `SagaRecoveryJob` con lease. | CA-05, CA-08, CA-12, CA-15, CA-20, CA-21, CA-22 |
+| INC-6 | Dom 8 a lun 9/11 | Mejoras opcionales: RF-08 y una vista del pedido y del historial del pago con el Visualizer de Postman. | RF-08 |
+| INC-7 | Mar 10/11 | README, diagramas, colección final con Newman y ensayo cronometrado de la demo. | ENT-02 a ENT-05, ENT-07, ENT-08 |
+| — | Mié 11/11 | Margen por si algo se atrasa. | — |
+| — | Jue 12/11 | Entrega final. | — |
 
 - Si INC-1 se atrasa, RF-09 y RF-11 pasan a INC-2.
-- Si INC-4 o INC-5 se atrasan, CA-21 y CA-22 pasan a P3.
-- Si la entrega es el 12/11, la semana extra va a los P3: CA-09, RF-08 y tests automáticos.
+- INC-6 es lo primero que se recorta: si algo se atrasa, sus días pasan a lo que falte.
+- Si INC-5 sigue atrasado después de usar los días de INC-6, CA-21 y CA-22 pasan a P3.
+- Quedan fuera del plan, salvo que sobre el margen del 11/11: CA-09 y los tests automáticos.
 
 ## Anexo C. Entregables
 
