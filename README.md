@@ -46,6 +46,8 @@ cd users-service
 ./mvnw spring-boot:run
 ```
 
+Si el sistema completo ya está levantado, el contenedor del servicio ocupa su puerto y el servicio local no puede arrancar. Antes de correrlo, detené ese contenedor, por ejemplo con `docker compose stop users-service`.
+
 ## Conectarse a MongoDB desde la máquina
 
 Con Compass o `mongosh`, usar `mongodb://localhost:27017/?directConnection=true`.
