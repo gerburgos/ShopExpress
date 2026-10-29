@@ -22,3 +22,9 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Archivos de los editores al abrir el repo completo. Cada servicio ya ignora los suyos
+# (target/, .idea/, etc.) en su propio .gitignore, generado por Spring Initializr.
+.idea/
+.vscode/
+*.iml

@@ -1,0 +1,327 @@
+<mxfile host="drawio" type="device">
+  <diagram id="SAGA" name="SAGA">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1720" pageHeight="1772" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="v2" value="ShopExpress: diagrama de secuencia de la SAGA de compra (POST /api/orders)" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="0" width="1000" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="v3" value="Cliente" style="shape=umlLifeline;participant=umlActor;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;verticalAlign=top;spacingTop=52;labelBackgroundColor=#ffffff;outlineConnect=0;portConstraint=eastwest;size=50;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="40" width="40" height="1592" as="geometry" />
+        </mxCell>
+        <mxCell id="v4" value="orders-service&lt;br&gt;&lt;b&gt;:OrderOrchestrator&lt;/b&gt;" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="330" y="40" width="180" height="1592" as="geometry" />
+        </mxCell>
+        <mxCell id="v5" value="&lt;b&gt;catalog-service&lt;/b&gt;&lt;br&gt;Catálogo e Inventario" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="730" y="40" width="180" height="1592" as="geometry" />
+        </mxCell>
+        <mxCell id="v6" value="&lt;b&gt;:SimulatedPaymentGateway&lt;/b&gt;" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="40" width="180" height="1592" as="geometry" />
+        </mxCell>
+        <mxCell id="v7" value="&lt;b&gt;users-service&lt;/b&gt;&lt;br&gt;Usuarios" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="40" width="180" height="1592" as="geometry" />
+        </mxCell>
+        <mxCell id="v8" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="414" y="130" width="12" height="1492" as="geometry" />
+        </mxCell>
+        <mxCell id="v9" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1534" y="236" width="12" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="v10" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="814" y="360" width="12" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="v11" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="814" y="492" width="12" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="v12" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1194" y="628" width="12" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="v13" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1194" y="994" width="12" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="v14" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="814" y="738" width="12" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="v15" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1194" y="896" width="12" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="v16" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="814" y="934" width="12" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="v17" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="814" y="1082" width="12" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="v18" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="814" y="1252" width="12" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="v19" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1194" y="1192" width="12" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="v20" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1194" y="1388" width="12" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="v21" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1534" y="1464" width="12" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="v22" value="alt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;recursiveResize=0;container=0;collapsible=0;width=40;height=22;fillColor=none;strokeColor=#666666;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1100" width="1560" height="462" as="geometry" />
+        </mxCell>
+        <mxCell id="v23" value="[reserva perdida]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="106" y="1102" width="420" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="v24" value="[reserva confirmada: pivote]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="68" y="1254" width="420" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="1252" as="sourcePoint" />
+            <mxPoint x="1620" y="1252" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v26" value="alt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;recursiveResize=0;container=0;collapsible=0;width=40;height=22;fillColor=none;strokeColor=#666666;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="646" width="1600" height="934" as="geometry" />
+        </mxCell>
+        <mxCell id="v27" value="[autorización rechazada]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="86" y="648" width="420" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="v28" value="[sin respuesta tras saga.retry.max-attempts intentos]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="48" y="800" width="420" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="v29" value="[autorización aprobada]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="48" y="996" width="420" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e30" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="40" y="798" as="sourcePoint" />
+            <mxPoint x="1640" y="798" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e31" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="40" y="994" as="sourcePoint" />
+            <mxPoint x="1640" y="994" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v32" value="alt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;recursiveResize=0;container=0;collapsible=0;width=40;height=22;fillColor=none;strokeColor=#666666;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="378" width="1640" height="1220" as="geometry" />
+        </mxCell>
+        <mxCell id="v33" value="[sin stock o producto inexistente]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="66" y="380" width="420" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="v34" value="[reservado]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=2;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="28" y="494" width="420" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e35" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="20" y="492" as="sourcePoint" />
+            <mxPoint x="1660" y="492" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e36" value="POST /api/orders (Idempotency-Key)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="100" y="150" as="sourcePoint" />
+            <mxPoint x="414" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e37" value="1. DataValidator" style="html=1;align=left;spacingLeft=6;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="168" as="sourcePoint" />
+            <mxPoint x="426" y="190" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="462" y="168" />
+              <mxPoint x="462" y="190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e38" value="2. UserValidator: GET /api/users/{userId}" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="236" as="sourcePoint" />
+            <mxPoint x="1534" y="236" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e39" value="200" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1534" y="274" as="sourcePoint" />
+            <mxPoint x="426" y="274" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e40" value="3. OrderRegistrar: pedido PROCESSING" style="html=1;align=left;spacingLeft=6;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="292" as="sourcePoint" />
+            <mxPoint x="426" y="314" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="462" y="292" />
+              <mxPoint x="462" y="314" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e41" value="4. StockReserver: POST /internal/reservations" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="360" as="sourcePoint" />
+            <mxPoint x="814" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e42" value="409 o 404: transacción abortada, nada reservado" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="814" y="432" as="sourcePoint" />
+            <mxPoint x="426" y="432" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e43" value="409 o 422: CANCELLED" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="414" y="470" as="sourcePoint" />
+            <mxPoint x="100" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e44" value="200: precios vigentes" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="814" y="542" as="sourcePoint" />
+            <mxPoint x="426" y="542" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e45" value="5. TotalCalculator" style="html=1;align=left;spacingLeft=6;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="560" as="sourcePoint" />
+            <mxPoint x="426" y="582" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="462" y="560" />
+              <mxPoint x="462" y="582" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e46" value="6. PaymentProcessor: authorize(orderId, total)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="628" as="sourcePoint" />
+            <mxPoint x="1194" y="628" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e47" value="DECLINED" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1194" y="700" as="sourcePoint" />
+            <mxPoint x="426" y="700" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e48" value="liberar: POST /internal/reservations/{orderId}/release" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="738" as="sourcePoint" />
+            <mxPoint x="814" y="738" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e49" value="422: CANCELLED, PAYMENT_DECLINED" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="414" y="776" as="sourcePoint" />
+            <mxPoint x="100" y="776" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e50" value="timeout: se agotaron los reintentos" style="html=1;align=left;spacingLeft=6;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="828" as="sourcePoint" />
+            <mxPoint x="426" y="850" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="462" y="828" />
+              <mxPoint x="462" y="850" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e51" value="reverse(orderId)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="896" as="sourcePoint" />
+            <mxPoint x="1194" y="896" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e52" value="liberar: POST /internal/reservations/{orderId}/release" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="934" as="sourcePoint" />
+            <mxPoint x="814" y="934" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e53" value="504: CANCELLED, PAYMENT_TIMEOUT" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="414" y="972" as="sourcePoint" />
+            <mxPoint x="100" y="972" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e54" value="APPROVED: pago AUTHORIZED" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1194" y="1044" as="sourcePoint" />
+            <mxPoint x="426" y="1044" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e55" value="7. OrderConfirmer: POST /internal/reservations/{orderId}/confirm" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="1082" as="sourcePoint" />
+            <mxPoint x="814" y="1082" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e56" value="409" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="814" y="1154" as="sourcePoint" />
+            <mxPoint x="426" y="1154" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e57" value="reverse(orderId)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="1192" as="sourcePoint" />
+            <mxPoint x="1194" y="1192" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e58" value="409: CANCELLED, RESERVATION_LOST" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="414" y="1230" as="sourcePoint" />
+            <mxPoint x="100" y="1230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e59" value="200" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="814" y="1302" as="sourcePoint" />
+            <mxPoint x="426" y="1302" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e60" value="pedido CONFIRMED" style="html=1;align=left;spacingLeft=6;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="1320" as="sourcePoint" />
+            <mxPoint x="426" y="1342" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="462" y="1320" />
+              <mxPoint x="462" y="1342" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e61" value="8. PaymentCapturer: capture(orderId)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="1388" as="sourcePoint" />
+            <mxPoint x="1194" y="1388" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e62" value="OK: pago CAPTURED" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1194" y="1426" as="sourcePoint" />
+            <mxPoint x="426" y="1426" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e63" value="9. PurchaseHistoryRecorder: POST /internal/users/{userId}/purchases" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="426" y="1464" as="sourcePoint" />
+            <mxPoint x="1534" y="1464" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e64" value="201" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1534" y="1502" as="sourcePoint" />
+            <mxPoint x="426" y="1502" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e65" value="201: CONFIRMED" style="html=1;verticalAlign=bottom;endArrow=open;endSize=8;dashed=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="414" y="1540" as="sourcePoint" />
+            <mxPoint x="100" y="1540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v66" value="&lt;b&gt;Notas&lt;/b&gt;&lt;br&gt;• Cada llamada remota se reintenta hasta saga.retry.max-attempts veces con la misma clave (orderId), solo ante fallas transitorias.&lt;br&gt;• La confirmación de la reserva (7) es el pivote: antes se compensa, después solo se avanza. Si 8 o 9 fallan, quedan como acciones pendientes para SagaRecoveryJob.&lt;br&gt;• Se omiten las respuestas de liberar y reverse." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=14;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1652" width="1660" height="84" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

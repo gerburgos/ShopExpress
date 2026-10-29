@@ -1,0 +1,5 @@
+# Lo compilado en la máquina no entra a la imagen: se compila adentro, con el JDK de la imagen.
+target/
+.idea/
+.vscode/
+*.iml

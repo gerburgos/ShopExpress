@@ -1,0 +1,69 @@
+# Levanta todo ShopExpress con un solo comando: docker compose up --build
+# Cada servicio llama a los otros por el nombre que tiene acá (por ejemplo, http://catalog-service:8082).
+
+services:
+  mongodb:
+    image: mongo:8.0
+    # Replica set de un nodo: MongoDB solo permite transacciones en un replica set,
+    # y la reserva de stock las necesita para no vender de más.
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+      - ./scripts/mongo-init-replica-set.js:/scripts/mongo-init-replica-set.js:ro
+    healthcheck:
+      # Además de chequear, inicializa el replica set la primera vez (ver el script).
+      test: ["CMD", "mongosh", "--quiet", "/scripts/mongo-init-replica-set.js"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:8.10
+    # Sin persistencia: Redis es solo una caché, y todo lo que guarda se puede reconstruir desde MongoDB.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+
+  users-service:
+    build: ./users-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/users?replicaSet=rs0
+      SPRING_DATA_REDIS_HOST: redis
+    depends_on:
+      # Espera a que el replica set tenga primario; si arrancara antes, las primeras escrituras fallarían.
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  catalog-service:
+    build: ./catalog-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/catalog?replicaSet=rs0
+      SPRING_DATA_REDIS_HOST: redis
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  orders-service:
+    build: ./orders-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/orders?replicaSet=rs0
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  # Los datos de MongoDB sobreviven a un "docker compose down"; "docker compose down -v" los borra.
+  mongodb-data:

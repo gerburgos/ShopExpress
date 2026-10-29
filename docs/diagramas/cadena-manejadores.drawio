@@ -1,0 +1,284 @@
+<mxfile host="drawio" type="device">
+  <diagram id="Cadena" name="Cadena">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="1778" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="v80" value="act Cadena de manejadores" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;recursiveResize=0;container=0;collapsible=0;width=230;height=24;fillColor=none;strokeColor=#666666;fontSize=12;fontStyle=1;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="20" y="40" width="1290" height="1618" as="geometry" />
+        </mxCell>
+        <mxCell id="v2" value="ShopExpress: diagrama de actividad de la cadena de manejadores (Chain of Responsibility)" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="0" width="1000" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="v3" value="" style="ellipse;html=1;shape=startState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="605" y="74" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="v4" value="1. DataValidator&lt;br&gt;(ValidadorDeDatos)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="138" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="POST /api/orders" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v3" target="v4">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="61.2" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v6" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="214" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v4" target="v6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v8" value="Responder 400 (F-01)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="920" y="209.0" width="300" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="[inválidos]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v6" target="v8">
+          <mxGeometry relative="1" x="-0.45" as="geometry" />
+        </mxCell>
+        <mxCell id="v10" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="217.0" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v8" target="v10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v12" value="2. UserValidator&lt;br&gt;comprueba que el usuario exista" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="284" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="[válidos]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v6" target="v12">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="38.8" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v14" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="360" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v12" target="v14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v16" value="Responder 422 (F-02)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="920" y="355.0" width="300" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" value="[no existe]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v14" target="v16">
+          <mxGeometry relative="1" x="-0.45" as="geometry" />
+        </mxCell>
+        <mxCell id="v18" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="363.0" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v16" target="v18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v20" value="3. OrderRegistrar&lt;br&gt;crea el pedido PROCESSING" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="430" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e21" value="[existe]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v14" target="v20">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="35.6" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v22" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="506" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v20" target="v22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v24" value="Responder con el pedido existente (F-03)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="920" y="501.0" width="300" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" value="[clave repetida]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v22" target="v24">
+          <mxGeometry relative="1" x="-0.45" as="geometry" />
+        </mxCell>
+        <mxCell id="v26" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="509.0" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e27" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v24" target="v26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v28" value="4. StockReserver (ValidadorDeStock)&lt;br&gt;reserva todos los ítems" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="576" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e29" value="[clave nueva]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v22" target="v28">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="51.6" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v30" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="652" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e31" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v28" target="v30">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v32" value="5. TotalCalculator&lt;br&gt;calcula el total con los precios de la reserva" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="722" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e33" value="[reservado]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v30" target="v32">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="45.2" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v34" value="6. PaymentProcessor (ProcesadorDePago)&lt;br&gt;pide la autorización" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="798" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e35" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v32" target="v34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v36" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="874" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e37" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v34" target="v36">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v38" value="7. OrderConfirmer&lt;br&gt;confirma la reserva: &lt;b&gt;pivote&lt;/b&gt;" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="944" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e39" value="[autorizada]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v36" target="v38">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="48.400000000000006" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v40" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="1020" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e41" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v38" target="v40">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v42" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="842.0" y="874.0" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e43" value="[sin stock, producto inexistente&lt;br&gt;o Catálogo sin respuesta]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="v30" target="v42">
+          <mxGeometry relative="1" x="-0.5" as="geometry">
+            <Array as="points">
+              <mxPoint x="860" y="670.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e44" value="[rechazada o sin respuesta]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v36" target="v42">
+          <mxGeometry relative="1" x="-0.15" as="geometry" />
+        </mxCell>
+        <mxCell id="e45" value="[reserva perdida]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=1;" edge="1" parent="1" source="v40" target="v42">
+          <mxGeometry relative="1" x="-0.4" as="geometry">
+            <Array as="points">
+              <mxPoint x="860" y="1038.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v46" value="OrderOrchestrator compensa en orden inverso&lt;br&gt;los pasos completados (F-04 a F-08)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="920" y="869.0" width="300" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e47" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v42" target="v46">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v48" value="Responder CANCELLED con el motivo&lt;br&gt;(409, 422, 503 o 504)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="920" y="945.0" width="300" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e49" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v46" target="v48">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v50" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1055.0" y="1021.0" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e51" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v48" target="v50">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v52" value="Dejar CONFIRM_RESERVATION pendiente&lt;br&gt;y responder 202 PROCESSING (F-09)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1013.0" width="280" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e53" value="[sin respuesta]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="v40" target="v52">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v54" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1023.0" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e55" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="v52" target="v54">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v56" value="&lt;b&gt;Pivote&lt;/b&gt; (RN-09): mientras la reserva no esté confirmada, una falla se compensa. Una vez confirmada, o si no se sabe, queda como acción pendiente para SagaRecoveryJob." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=14;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="90" y="931.0" width="280" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="e57" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#999999;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v56" target="v38">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v58" value="8. PaymentCapturer&lt;br&gt;captura el pago" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="1090" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e59" value="[confirmada]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v40" target="v58">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="48.400000000000006" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v60" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="1166" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e61" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v58" target="v60">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v62" value="Dejar CAPTURE_PAYMENT pendiente (F-10)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1161.0" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e63" value="[sin respuesta]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="v60" target="v62">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v64" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="1236" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e65" value="[capturado]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v60" target="v64">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="45.2" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e66" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="v62" target="v64">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="230.0" y="1254.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v67" value="9. PurchaseHistoryRecorder&lt;br&gt;registra la compra en el historial" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="1306" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e68" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v64" target="v67">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v69" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="1382" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e70" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v67" target="v69">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v71" value="Dejar RECORD_PURCHASE pendiente (F-10)" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1377.0" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e72" value="[sin respuesta]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="v69" target="v71">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v73" value="" style="rhombus;html=1;fillColor=#ffffff;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="602.0" y="1452" width="36" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="e74" value="[registrada]" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v69" target="v73">
+          <mxGeometry relative="1" x="0" as="geometry">
+            <mxPoint x="48.400000000000006" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e75" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="v71" target="v73">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="230.0" y="1470.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="v76" value="Responder 201 CONFIRMED" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="480.0" y="1522" width="280" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e77" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v73" target="v76">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v78" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="605" y="1598" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e79" value="" style="endArrow=open;endSize=10;html=1;rounded=0;fontSize=11;strokeColor=#333333;verticalAlign=bottom;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v76" target="v78">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="v81" value="&lt;b&gt;Notas&lt;/b&gt;&lt;br&gt;• Los números son los manejadores de 3.3.2, y F-01 a F-10, las fallas de 3.3.5.&lt;br&gt;• [sin respuesta]: se agotaron los saga.retry.max-attempts intentos, siempre con la misma clave.&lt;br&gt;• Azul: manejadores. Rojo: la cadena se corta o se compensa. Naranja: queda una acción pendiente, que procesa SagaRecoveryJob (3.3.6)." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=14;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1678" width="1290" height="76" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

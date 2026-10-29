@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: users-service
+  mongodb:
+    # Valor para correr fuera de Docker contra el MongoDB de Compose. directConnection evita que el driver
+    # busque al miembro "mongodb:27017" del replica set, un nombre que solo existe dentro de la red de Docker.
+    # En Compose se reemplaza con SPRING_MONGODB_URI.
+    uri: mongodb://localhost:27017/users?directConnection=true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8081
