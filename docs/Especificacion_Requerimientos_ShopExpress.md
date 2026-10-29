@@ -3,9 +3,10 @@
 | | |
 | --- | --- |
 | Proyecto | Tarea 2, NoSQL 2026: sistema de microservicios para comercio electrónico |
-| Fecha | 27 de octubre de 2026 |
-| Versión | 1.2 |
-| Estado | Base para implementar. Ningún requisito está implementado ni verificado todavía. |
+| Fecha | 28 de octubre de 2026 |
+| Versión | 1.3 |
+| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. Los demás requisitos todavía no están implementados. |
+| Ubicación | `docs/` del repositorio. Es la única versión vigente de este documento. |
 
 ## 1. Introducción
 
@@ -53,7 +54,7 @@ El sistema expone una API REST, persiste en MongoDB y usa Redis como caché de l
 
 | ID | Fuente |
 | --- | --- |
-| R-01 | [Consigna: Tarea 2 NoSQL 2026, 4 páginas](</home/gburgos/Documents/Tecnologo/NoSQL/Entregable/Tarea 2 NoSql  2026.pdf>) |
+| R-01 | Consigna: Tarea 2 NoSQL 2026, 4 páginas, entregada por el docente en PDF |
 | R-02 | [MongoDB: Transactions](https://www.mongodb.com/docs/manual/core/transactions/) |
 | R-03 | [MongoDB: Production Considerations (write conflicts)](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/) |
 | R-04 | [MongoDB: Atomicity and Transactions](https://www.mongodb.com/docs/manual/core/write-operations-atomicity/) |
@@ -718,6 +719,7 @@ Los valores son iniciales y no están medidos. El lease no se configura: se calc
 | --- | --- | --- |
 | `cache.users.ttl-seconds` | 60 | TTL de los usuarios en la caché. |
 | `cache.products.ttl-seconds` | 10 | TTL de los productos en la caché. |
+| `spring.data.redis.timeout` | 500ms | Espera máxima de cada operación con Redis. Si Redis no responde, la lectura pasa a MongoDB después de este tiempo (D-05, CA-14). Sin este valor, el cliente espera 60 s: se midió con Redis detenido. |
 | `http.client.connect-timeout-ms` | 1000 | Timeout de conexión de las llamadas entre servicios y a la pasarela. |
 | `http.client.read-timeout-ms` | 3000 | Timeout de lectura de esas mismas llamadas. |
 | `saga.retry.max-attempts` | 3 | Intentos por llamada dentro de una solicitud. |
@@ -850,10 +852,10 @@ El plan asume que la entrega es el jueves 5/11/2026 (P-01). Las fechas son una g
 | ENT-08 | Defensa de unos 10 minutos con demo | Guion: CA-03, CA-10, CA-16, CA-06, CA-08, CA-14, y CA-04 si alcanza el tiempo |
 
 ```text
-shopexpress/
+ShopExpress/
 ├── README.md
 ├── docker-compose.yml
-├── docs/              esta especificación
+├── docs/              esta especificación y los diagramas
 ├── users-service/     Servicio de Usuarios
 ├── catalog-service/   Servicio de Catálogo e Inventario
 ├── orders-service/    Servicio de Pedidos y Pagos
