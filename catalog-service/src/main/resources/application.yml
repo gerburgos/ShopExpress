@@ -7,9 +7,21 @@ spring:
     # En Compose se reemplaza con SPRING_MONGODB_URI.
     uri: mongodb://localhost:27017/catalog?directConnection=true
   data:
+    mongodb:
+      representation:
+        # Se midió que, sin esta propiedad, Boot 4.1.2 ya guarda los importes como Decimal128. Se fija igual para
+        # no depender del valor por defecto: versiones anteriores de Spring Data los guardaban como String (R-06).
+        big-decimal: decimal128
     redis:
       host: localhost
       port: 6379
+  jackson:
+    # Los números se aceptan solo como números JSON, y el stock solo como entero: se midió que, sin estas dos
+    # propiedades, "stock": 2.5 se guarda como 2 y "stock": "5" como 5, y los dos responden 201. Así responden 400.
+    deserialization:
+      accept-float-as-int: false
+    mapper:
+      allow-coercion-of-scalars: false
 
 server:
   port: 8082

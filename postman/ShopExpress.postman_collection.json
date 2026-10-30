@@ -1,0 +1,883 @@
+{
+  "info": {
+    "name": "ShopExpress",
+    "description": "Pruebas de la API de ShopExpress. Cada solicitud verifica su resultado con tests.\n\nLas carpetas se corren en orden: algunas solicitudes usan el id que guardó una anterior.\n\nDesde la raíz del repositorio:\n\n```\nnpx newman run postman/ShopExpress.postman_collection.json -e postman/ShopExpress.postman_environment.json\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Crear usuario con una dirección",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Valores nuevos en cada corrida: el email y el documento son únicos.",
+                  "pm.collectionVariables.set(\"runId\", Date.now().toString(36));",
+                  "pm.collectionVariables.set(\"documentNumber\", String(Math.floor(10000000 + Math.random() * 90000000)));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const user = pm.response.json();",
+                  "pm.test(\"Responde 201 con un id usr_\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(user.id).to.match(/^usr_/);",
+                  "});",
+                  "pm.test(\"Devuelve los datos enviados y la dirección\", () => {",
+                  "    pm.expect(user.firstName).to.eql(\"Juan\");",
+                  "    pm.expect(user.email).to.eql(\"juan.perez.\" + pm.collectionVariables.get(\"runId\") + \"@example.com\");",
+                  "    pm.expect(user.addresses).to.have.length(1);",
+                  "    pm.expect(user.addresses[0].city).to.eql(\"Montevideo\");",
+                  "});",
+                  "pm.test(\"El header Location apunta al usuario\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/api/users/\" + user.id + \"$\"));",
+                  "});",
+                  "pm.collectionVariables.set(\"userId\", user.id);",
+                  "pm.collectionVariables.set(\"createdUser\", JSON.stringify(user));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users",
+            "description": "CA-01. Los datos únicos llevan un sufijo aleatorio para que la colección se pueda correr varias veces.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"CI\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"firstName\": \"Juan\",\n  \"lastName\": \"Pérez\",\n  \"email\": \"juan.perez.{{runId}}@example.com\",\n  \"addresses\": [\n    {\n      \"street\": \"Av. Principal 123\",\n      \"city\": \"Montevideo\",\n      \"postalCode\": \"11000\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar el usuario creado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con los mismos datos que el alta\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.eql(JSON.parse(pm.collectionVariables.get(\"createdUser\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersUrl}}/api/users/{{userId}}",
+            "description": "CA-01: el GET devuelve los mismos campos y direcciones que el alta."
+          }
+        },
+        {
+          "name": "Email repetido, escrito en mayúsculas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 con el código EMAIL_ALREADY_EXISTS\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"EMAIL_ALREADY_EXISTS\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users",
+            "description": "CA-01: un email repetido da 409. Se manda en mayúsculas porque el servicio guarda el email en minúsculas.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"CI\",\n  \"documentNumber\": \"1{{documentNumber}}\",\n  \"firstName\": \"Otra\",\n  \"lastName\": \"Persona\",\n  \"email\": \"JUAN.PEREZ.{{runId}}@EXAMPLE.COM\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Documento repetido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 con el código DOCUMENT_ALREADY_EXISTS\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"DOCUMENT_ALREADY_EXISTS\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users",
+            "description": "El par tipo y número de documento es único. El tipo se manda en minúsculas por el mismo motivo que el email.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"ci\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"firstName\": \"Otra\",\n  \"lastName\": \"Persona\",\n  \"email\": \"otra.{{runId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear usuario con datos inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"documentType\", \"documentNumber\", \"lastName\", \"email\", \"addresses[0].city\", \"addresses[0].postalCode\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users",
+            "description": "CA-13. Falta el documento y el apellido, el email no es válido y la dirección está incompleta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"\",\n  \"firstName\": \"Ana\",\n  \"email\": \"no-es-un-email\",\n  \"addresses\": [\n    {\n      \"street\": \"Calle 1\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar un usuario inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 con el código USER_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"USER_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersUrl}}/api/users/usr_no-existe",
+            "description": "CA-13."
+          }
+        },
+        {
+          "name": "Agregar una dirección",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 con la dirección agregada al final\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    const addresses = pm.response.json().addresses;",
+                  "    pm.expect(addresses).to.have.length(2);",
+                  "    pm.expect(addresses[1].street).to.eql(\"Bv. Artigas 456\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users/{{userId}}/addresses",
+            "description": "CA-18.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"street\": \"Bv. Artigas 456\",\n  \"city\": \"Montevideo\",\n  \"postalCode\": \"11300\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar el usuario: muestra la dirección nueva",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con las dos direcciones\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().addresses.map(a => a.street)).to.eql([\"Av. Principal 123\", \"Bv. Artigas 456\"]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersUrl}}/api/users/{{userId}}",
+            "description": "CA-18: la dirección aparece enseguida en el GET."
+          }
+        },
+        {
+          "name": "Agregar la dirección número 11",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// El usuario tiene 2 direcciones: se agregan 8 para llegar al máximo de 10.",
+                  "const url = pm.variables.replaceIn(\"{{usersUrl}}/api/users/{{userId}}/addresses\");",
+                  "for (let i = 3; i <= 10; i++) {",
+                  "    pm.sendRequest({",
+                  "        url: url,",
+                  "        method: \"POST\",",
+                  "        header: [{ key: \"Content-Type\", value: \"application/json\" }],",
+                  "        body: { mode: \"raw\", raw: JSON.stringify({ street: \"Calle \" + i, city: \"Montevideo\", postalCode: \"11000\" }) }",
+                  "    }, (err, res) => {",
+                  "        if (err || res.code !== 201) {",
+                  "            console.error(\"No se pudo agregar la dirección \" + i, err || res.code);",
+                  "        }",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 422 con el código ADDRESS_LIMIT_REACHED\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"ADDRESS_LIMIT_REACHED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users/{{userId}}/addresses",
+            "description": "CA-18: el máximo es 10 direcciones. El script previo agrega 8 para llegar a 10, así esta es la número 11.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"street\": \"Calle 11\",\n  \"city\": \"Montevideo\",\n  \"postalCode\": \"11000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar el usuario: sigue con 10 direcciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Tiene exactamente 10 direcciones\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().addresses).to.have.length(10);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Agregar una dirección incompleta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"city\", \"postalCode\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users/{{userId}}/addresses",
+            "description": "CA-13.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"street\": \"Calle sin ciudad\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Agregar una dirección a un usuario inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 con el código USER_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"USER_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users/usr_no-existe/addresses",
+            "description": "CA-13.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"street\": \"Calle 1\",\n  \"city\": \"Montevideo\",\n  \"postalCode\": \"11000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catálogo",
+      "item": [
+        {
+          "name": "Crear producto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const product = pm.response.json();",
+                  "pm.test(\"Responde 201 con un id prod_\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(product.id).to.match(/^prod_/);",
+                  "});",
+                  "pm.test(\"Devuelve los datos, el stock y el precio con dos decimales\", () => {",
+                  "    pm.expect(product.name).to.eql(\"Mate de calabaza\");",
+                  "    pm.expect(product.categories).to.eql([\"hogar\", \"regionales\"]);",
+                  "    pm.expect(product.stock).to.eql(10);",
+                  "    pm.expect(pm.response.text()).to.include('\"price\":25.50');",
+                  "});",
+                  "pm.test(\"El header Location apunta al producto\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/api/products/\" + product.id + \"$\"));",
+                  "});",
+                  "pm.collectionVariables.set(\"productId\", product.id);",
+                  "pm.collectionVariables.set(\"createdProduct\", JSON.stringify(product));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "CA-02. El precio se manda como 25.5 y se devuelve con dos decimales.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mate de calabaza\",\n  \"description\": \"Mate artesanal\",\n  \"categories\": [\n    \"hogar\",\n    \"regionales\"\n  ],\n  \"price\": 25.5,\n  \"stock\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar el producto creado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con los mismos datos que el alta\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.eql(JSON.parse(pm.collectionVariables.get(\"createdProduct\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{catalogUrl}}/api/products/{{productId}}",
+            "description": "CA-02: el GET devuelve los datos y el stock."
+          }
+        },
+        {
+          "name": "Crear producto con datos inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"name\", \"price\", \"stock\", \"categories[1]\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "CA-13. Sin nombre, precio 0, stock negativo y una categoría vacía.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 0,\n  \"stock\": -1,\n  \"categories\": [\n    \"hogar\",\n    \"\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear producto con un precio de tres decimales",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"price\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "Se rechaza en lugar de redondear, para no cambiar el precio sin avisar.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bombilla\",\n  \"price\": 9.999,\n  \"stock\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear producto con stock decimal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código MALFORMED_REQUEST\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"MALFORMED_REQUEST\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "El stock es entero. Sin configurarlo, Jackson guardaba 2.5 como 2 y respondía 201.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bombilla\",\n  \"price\": 9.99,\n  \"stock\": 2.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear producto con el stock como texto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código MALFORMED_REQUEST\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"MALFORMED_REQUEST\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "Los números se mandan como números JSON. Sin configurarlo, Jackson convertía \"5\" en 5 y respondía 201.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bombilla\",\n  \"price\": 9.99,\n  \"stock\": \"5\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar un producto inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 con el código PRODUCT_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"PRODUCT_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{catalogUrl}}/api/products/prod_no-existe",
+            "description": "CA-13."
+          }
+        },
+        {
+          "name": "Modificar precio y categorías",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const product = pm.response.json();",
+                  "pm.test(\"Responde 200 con el precio y las categorías nuevas\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.text()).to.include('\"price\":30.00');",
+                  "    pm.expect(product.categories).to.eql([\"hogar\"]);",
+                  "});",
+                  "pm.test(\"No cambia lo que no se envió\", () => {",
+                  "    pm.expect(product.name).to.eql(\"Mate de calabaza\");",
+                  "    pm.expect(product.stock).to.eql(10);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products/{{productId}}",
+            "description": "Solo cambian los campos enviados.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 30,\n  \"categories\": [\n    \"hogar\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Intentar modificar el stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"stock\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products/{{productId}}",
+            "description": "RN-12: el stock solo cambia sumando o restando, con reposiciones y ventas.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock\": 99\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Consultar el producto modificado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con el precio nuevo y el stock intacto\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.text()).to.include('\"price\":30.00');",
+                  "    pm.expect(pm.response.json().stock).to.eql(10);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{catalogUrl}}/api/products/{{productId}}",
+            "description": "El precio nuevo se ve enseguida, y el stock sigue en 10."
+          }
+        },
+        {
+          "name": "Modificar un producto inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 con el código PRODUCT_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"PRODUCT_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products/prod_no-existe",
+            "description": "CA-13.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "documentNumber",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "createdUser",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "createdProduct",
+      "value": ""
+    }
+  ]
+}

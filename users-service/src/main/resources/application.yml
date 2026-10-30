@@ -7,6 +7,10 @@ spring:
     # En Compose se reemplaza con SPRING_MONGODB_URI.
     uri: mongodb://localhost:27017/users?directConnection=true
   data:
+    mongodb:
+      # Crea al arrancar los índices únicos declarados en User, que viene apagado por defecto. Así los índices
+      # quedan escritos junto al modelo, y un despliegue desde cero los tiene sin pasos manuales.
+      auto-index-creation: true
     redis:
       host: localhost
       port: 6379

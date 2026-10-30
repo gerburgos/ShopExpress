@@ -10,6 +10,7 @@ Tiene tres servicios Spring Boot. MongoDB es la fuente de verdad de los tres, y 
 
 - **Docker con Docker Compose.** No hace falta Java ni Maven: cada servicio se compila dentro de Docker.
 - **JDK 25**, solo para desarrollar o correr los tests fuera de Docker.
+- **Node.js**, solo para correr la colección de Postman desde la terminal con Newman.
 
 ## Levantar el sistema
 
@@ -28,6 +29,18 @@ El primer arranque tarda unos minutos, porque baja las imágenes y las dependenc
 | Redis 8.10, sin persistencia | 6379 | `docker compose exec redis redis-cli ping` |
 
 Cada servicio responde `"status":"UP"` solo si llega a sus bases: los tres a MongoDB, y Usuarios y Catálogo, además, a Redis.
+
+## Probar la API
+
+Con el sistema levantado, desde la raíz del repositorio:
+
+```bash
+npx newman run postman/ShopExpress.postman_collection.json -e postman/ShopExpress.postman_environment.json
+```
+
+Cada solicitud verifica su resultado, y Newman termina con un resumen de las verificaciones que fallaron. La colección crea datos nuevos en cada corrida, así que se puede correr varias veces seguidas.
+
+Para usarla desde Postman, se importan los dos archivos de `postman/` y se elige el entorno **ShopExpress local**. Las solicitudes se corren en orden, porque algunas usan el id que guardó una anterior.
 
 ## Detener
 
@@ -64,5 +77,6 @@ ShopExpress/
 ├── users-service/     Servicio de Usuarios
 ├── catalog-service/   Servicio de Catálogo e Inventario
 ├── orders-service/    Servicio de Pedidos y Pagos
+├── postman/           colección y entorno de Postman
 └── scripts/           inicialización del replica set
 ```
