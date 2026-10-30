@@ -2,11 +2,12 @@ package com.shopexpress.users.dto;
 
 import java.util.List;
 
+import com.shopexpress.users.model.DocumentType;
 import com.shopexpress.users.model.User;
 
 public record UserResponse(
 		String id,
-		String documentType,
+		DocumentType documentType,
 		String documentNumber,
 		String firstName,
 		String lastName,

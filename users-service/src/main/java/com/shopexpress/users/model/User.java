@@ -13,7 +13,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @CompoundIndex(name = User.DOCUMENT_INDEX, def = "{'documentType': 1, 'documentNumber': 1}", unique = true)
 public record User(
 		@Id String id,
-		String documentType,
+		DocumentType documentType,
 		String documentNumber,
 		String firstName,
 		String lastName,

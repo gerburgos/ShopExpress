@@ -153,10 +153,88 @@
               }
             ],
             "url": "{{usersUrl}}/api/users",
-            "description": "El par tipo y número de documento es único. El tipo se manda en minúsculas por el mismo motivo que el email.",
+            "description": "El par tipo y número de documento es único.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"documentType\": \"ci\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"firstName\": \"Otra\",\n  \"lastName\": \"Persona\",\n  \"email\": \"otra.{{runId}}@example.com\"\n}",
+              "raw": "{\n  \"documentType\": \"CI\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"firstName\": \"Otra\",\n  \"lastName\": \"Persona\",\n  \"email\": \"otra.{{runId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mismo número con otro tipo de documento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 con el tipo DNI\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().documentType).to.eql(\"DNI\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users",
+            "description": "El número se repite, pero en un DNI: es otro documento y el alta es válida.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"firstName\": \"Otra\",\n  \"lastName\": \"Persona\",\n  \"email\": \"dni.{{runId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Tipo de documento fuera de la lista",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"documentType\", \"CI, DNI o PASSPORT\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users",
+            "description": "Los tipos válidos son CI, DNI y PASSPORT. Una variante como C.I. se rechaza, para que no pase como otro documento.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"C.I.\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"firstName\": \"Otra\",\n  \"lastName\": \"Persona\",\n  \"email\": \"variante.{{runId}}@example.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

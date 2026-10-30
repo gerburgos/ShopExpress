@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import com.shopexpress.users.dto.AddressDto;
 import com.shopexpress.users.dto.CreateUserRequest;
 import com.shopexpress.users.exception.ApiException;
+import com.shopexpress.users.model.DocumentType;
 import com.shopexpress.users.model.User;
 import com.shopexpress.users.repository.UserRepository;
 
@@ -32,11 +33,11 @@ public class UserService {
 
 	public User create(CreateUserRequest request) {
 		List<AddressDto> addresses = request.addresses() == null ? List.of() : request.addresses();
-		// Se normalizan los campos únicos para que "Juan@Example.com" y "juan@example.com", o "ci" y "CI",
-		// no pasen como usuarios distintos.
+		// El email es único: se guarda en minúsculas para que "Juan@Example.com" y "juan@example.com" no pasen como
+		// usuarios distintos.
 		User user = new User(
 				"usr_" + UUID.randomUUID(),
-				request.documentType().trim().toUpperCase(Locale.ROOT),
+				DocumentType.valueOf(request.documentType()),
 				request.documentNumber().trim(),
 				request.firstName(),
 				request.lastName(),
