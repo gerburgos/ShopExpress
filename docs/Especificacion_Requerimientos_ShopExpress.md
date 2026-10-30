@@ -3,9 +3,9 @@
 | | |
 | --- | --- |
 | Proyecto | Tarea 2, NoSQL 2026: sistema de microservicios para comercio electrónico |
-| Fecha | 28 de octubre de 2026 |
-| Versión | 1.3 |
-| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. Los demás requisitos todavía no están implementados. |
+| Fecha | 29 de octubre de 2026 |
+| Versión | 1.4 |
+| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. INC-1 está implementado: el alta, la consulta y la modificación de usuarios y productos pasan la colección Postman. Los demás requisitos todavía no están implementados. |
 | Ubicación | `docs/` del repositorio. Es la única versión vigente de este documento. |
 
 ## 1. Introducción
@@ -152,7 +152,7 @@ Diagrama de componentes UML. La bola marca la interfaz que provee cada servicio,
 | RD-05 | Un lenguaje y framework de la lista de la consigna. Se usa Java con Spring Boot (D-14). | Exigido. |
 | RD-06 | `docker-compose.yml` y un `Dockerfile` por servicio. | Valorado por la consigna; se adopta. |
 | RD-07 | Código y contrato HTTP en inglés; textos para personas en español (Anexo A). | Decisión del estudiante (D-15). |
-| RD-08 | Entorno de desarrollo: Java 24.0.2, Maven 3.9.16, Docker 29.7.2 y Docker Compose 5.5.1, comprobados el 24/10/2026. | Entorno del estudiante. |
+| RD-08 | Entorno de desarrollo: JDK 25.0.4.1, Maven 3.10.0 a través del Maven Wrapper de cada servicio, Docker 29.7.2, Docker Compose 5.5.1 y Node.js 24.14.0, este último solo para Newman. Comprobados el 29/10/2026. Las imágenes compilan y ejecutan con Java 25 (`eclipse-temurin:25`). | Entorno del estudiante. |
 
 ### 2.5. Supuestos, acuerdos y pendientes
 
@@ -216,7 +216,9 @@ Diagrama de componentes UML. La bola marca la interfaz que provee cada servicio,
 - **Identificadores:** los genera el servidor, con un prefijo y un UUID: `usr_…`, `prod_…`, `ord_…`.
 - **Importes:** números con dos decimales, en UYU.
 - **Fechas:** ISO-8601, en UTC.
-- **Errores:** `{ "code": "OUT_OF_STOCK", "message": "No hay stock suficiente del producto prod_7d10…" }`. El `code` va en inglés y no cambia; el `message` va en español.
+- **Errores:** `{ "code": "OUT_OF_STOCK", "message": "No hay stock suficiente del producto prod_7d10…" }`. El `code` va en inglés y no cambia; el `message` va en español. Dos códigos son comunes a todas las rutas, y los demás se nombran en cada RF:
+  - `VALIDATION_ERROR` (400): algún campo no cumple su regla. El mensaje nombra cada campo con problemas.
+  - `MALFORMED_REQUEST` (400): el cuerpo falta, no es un JSON válido, o un campo tiene otro tipo. Los números se mandan como números JSON: un stock con decimales, o un precio o un stock entre comillas, se rechazan.
 - **Headers de RF-05:**
   - `Idempotency-Key` es obligatorio.
   - `X-Simulated-Payment` es opcional y fuerza el resultado de la pasarela:
@@ -244,15 +246,15 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 **RF-01. Crear usuario.** `POST /api/users`. Exigido, P1. CA-01, CA-13.
 - **Obligatorios:** `documentType`, `documentNumber`, `firstName`, `lastName` y `email`.
 - **Opcional:** `addresses`. Cada dirección exige `street`, `city` y `postalCode`, con un máximo de 10 (RN-11).
-- **Únicos:** `email` y el par `documentType` + `documentNumber`.
+- **Únicos:** `email` y el par `documentType` + `documentNumber`. El email se guarda en minúsculas y el tipo de documento en mayúsculas, para que `Juan@Example.com` y `juan@example.com` no pasen como dos usuarios.
 - **Respuestas:**
   - 201 con el usuario y su `id`;
   - 400 si falla una validación;
-  - 409 si el email o el documento ya existen.
+  - 409 si el email (`EMAIL_ALREADY_EXISTS`) o el documento (`DOCUMENT_ALREADY_EXISTS`) ya existen.
 
 **RF-02. Consultar usuario.** `GET /api/users/{userId}`. Exigido, P1. CA-01, CA-14.
 - Puede responder desde la caché (RNF-01).
-- **Respuestas:** 200; 404.
+- **Respuestas:** 200; 404 (`USER_NOT_FOUND`).
 
 **RF-07. Consultar historial de compras.** `GET /api/users/{userId}/purchases`. P2. CA-12.
 - Devuelve las compras confirmadas, de la más reciente a la más antigua. Cada una trae `orderId`, `date`, `total` e `items`.
@@ -270,22 +272,24 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 - **Respuestas:**
   - 201 con el usuario y sus direcciones;
   - 400 si falla una validación;
-  - 404 si el usuario no existe;
-  - 422 si el usuario ya tiene 10 direcciones (RN-11).
+  - 404 si el usuario no existe (`USER_NOT_FOUND`);
+  - 422 si el usuario ya tiene 10 direcciones (`ADDRESS_LIMIT_REACHED`, RN-11).
 
 #### Servicio de Catálogo e Inventario
 
 **RF-03. Crear producto.** `POST /api/products`. Exigido, P1. CA-02.
-- **Obligatorios:** `name`, `price` (mayor que 0) y `stock` (entero, 0 o más).
+- **Obligatorios:** `name`, `price` (mayor que 0, con hasta dos decimales) y `stock` (entero, 0 o más).
+- Un precio con más de dos decimales se rechaza, en lugar de redondearlo: redondear cambiaría el precio sin avisar.
 - **Opcionales:** `description` y `categories` (lista de nombres).
 - **Respuestas:** 201 con el producto y su `id`; 400.
 
 **RF-04. Consultar producto y stock.** `GET /api/products/{productId}`. Exigido, P1. CA-02, CA-10, CA-11.
 - Puede responder desde la caché. El stock que muestra puede estar atrasado hasta un TTL (RNF-01).
-- **Respuestas:** 200; 404.
+- **Respuestas:** 200; 404 (`PRODUCT_NOT_FOUND`).
 
 **RF-09. Modificar producto.** `PATCH /api/products/{productId}`. P2. CA-16.
-- Acepta `name`, `description`, `categories` y `price`, con las mismas reglas que el alta.
+- Acepta `name`, `description`, `categories` y `price`, con las mismas reglas que el alta. Un campo ausente o `null` no se modifica.
+- Escribe solo los campos recibidos, sin reescribir el documento entero: reescribirlo pisaría el stock de una reserva concurrente (RN-12).
 - Rechaza `stock` e `id` (RN-12).
 - Invalida la caché del producto.
 - **Respuestas:** 200 con el producto actualizado; 400; 404.
@@ -587,7 +591,7 @@ Cuando una acción agota `saga.recovery.max-attempts`, el pedido queda con `requ
 Una instancia de MongoDB configurada como replica set de un nodo (`rs0`), con una base por servicio.
 
 - **Lo que expone la API:** usa los mismos nombres de campo, salvo que `_id` sale como `id` y los campos internos no salen.
-- **Importes:** `BigDecimal` en Java y `Decimal128` en Mongo. En INC-1 hay que verificar qué tipo guarda Spring Data en la base, porque admite `NumberDecimal` y `String` (R-06).
+- **Importes:** `BigDecimal` en Java y `Decimal128` en Mongo. Spring Data admite guardarlos como `NumberDecimal` o como `String` (R-06). Se verificó en INC-1, el 29/10/2026, que con Boot 4.1.2 el alta y la modificación los guardan como `Decimal128` aun sin configurar nada. Igual se fija `spring.data.mongodb.representation.big-decimal: decimal128`, para no depender del valor por defecto.
 
 **`users.users`.** Índices únicos sobre `email` y sobre (`documentType`, `documentNumber`).
 
