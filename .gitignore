@@ -28,3 +28,7 @@ replay_pid*
 .idea/
 .vscode/
 *.iml
+
+# Base local del MCP de memoria (enhanced-memory-ai): guarda contexto de las sesiones de trabajo, no es parte
+# del proyecto.
+enhanced-memory.db
