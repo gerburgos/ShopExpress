@@ -246,7 +246,8 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 **RF-01. Crear usuario.** `POST /api/users`. Exigido, P1. CA-01, CA-13.
 - **Obligatorios:** `documentType`, `documentNumber`, `firstName`, `lastName` y `email`.
 - **Opcional:** `addresses`. Cada dirección exige `street`, `city` y `postalCode`, con un máximo de 10 (RN-11).
-- **Únicos:** `email` y el par `documentType` + `documentNumber`. El email se guarda en minúsculas y el tipo de documento en mayúsculas, para que `Juan@Example.com` y `juan@example.com` no pasen como dos usuarios.
+- **Tipo de documento:** `CI`, `DNI` o `PASSPORT`, escrito así; cualquier otro valor da 400. Con texto libre, `CI` y `C.I.` serían documentos distintos, y la misma persona podría registrarse dos veces.
+- **Únicos:** `email` y el par `documentType` + `documentNumber`. El mismo número con otro tipo es otro documento. El email se guarda en minúsculas, para que `Juan@Example.com` y `juan@example.com` no pasen como dos usuarios.
 - **Respuestas:**
   - 201 con el usuario y su `id`;
   - 400 si falla una validación;
