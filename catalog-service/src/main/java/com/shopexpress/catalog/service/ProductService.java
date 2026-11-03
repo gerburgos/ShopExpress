@@ -5,6 +5,10 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -13,6 +17,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.shopexpress.catalog.config.CacheConfig;
 import com.shopexpress.catalog.dto.CreateProductRequest;
 import com.shopexpress.catalog.dto.UpdateProductRequest;
 import com.shopexpress.catalog.exception.ApiException;
@@ -21,6 +26,8 @@ import com.shopexpress.catalog.repository.ProductRepository;
 
 @Service
 public class ProductService {
+
+	private static final Logger log = LoggerFactory.getLogger(ProductService.class);
 
 	private final ProductRepository repository;
 	private final MongoTemplate mongoTemplate;
@@ -42,10 +49,19 @@ public class ProductService {
 		return repository.insert(product);
 	}
 
+	// Cache-aside: si el producto está en Redis, este método no se ejecuta. Por eso el log de abajo aparece solo cuando
+	// la lectura llega a MongoDB, y sirve para comprobar que la segunda lectura sale de la caché (CA-11).
+	// Las ventas no invalidan esta entrada: el stock que se muestra puede atrasarse hasta un TTL, y la reserva lo
+	// controla contra MongoDB (D-05, RN-08).
+	@Cacheable(cacheNames = CacheConfig.PRODUCTS, key = "#productId")
 	public Product get(String productId) {
+		log.info("Producto {} leído de MongoDB", productId);
 		return repository.findById(productId).orElseThrow(() -> notFound(productId));
 	}
 
+	// Se invalida y no se actualiza la entrada: la próxima lectura la vuelve a cargar desde MongoDB, con el precio
+	// nuevo (CA-16). Si la modificación falla, la entrada queda como estaba.
+	@CacheEvict(cacheNames = CacheConfig.PRODUCTS, key = "#productId")
 	public Product update(String productId, UpdateProductRequest request) {
 		Update update = new Update();
 		if (request.name() != null) {

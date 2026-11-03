@@ -14,6 +14,13 @@ spring:
     redis:
       host: localhost
       port: 6379
+      # Sin un límite, el cliente espera 60 s a que Redis responda: se midió con Redis detenido. Con este valor, la
+      # lectura pasa a MongoDB después de medio segundo (D-05).
+      timeout: 500ms
 
 server:
   port: 8081
+
+cache:
+  users:
+    ttl-seconds: 60

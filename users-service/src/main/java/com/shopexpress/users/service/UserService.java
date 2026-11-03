@@ -4,6 +4,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -13,6 +17,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.shopexpress.users.config.CacheConfig;
 import com.shopexpress.users.dto.AddressDto;
 import com.shopexpress.users.dto.CreateUserRequest;
 import com.shopexpress.users.exception.ApiException;
@@ -22,6 +27,8 @@ import com.shopexpress.users.repository.UserRepository;
 
 @Service
 public class UserService {
+
+	private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
 	private final UserRepository repository;
 	private final MongoTemplate mongoTemplate;
@@ -63,10 +70,17 @@ public class UserService {
 		}
 	}
 
+	// Cache-aside: si el usuario está en Redis, este método no se ejecuta. Por eso el log de abajo aparece solo cuando
+	// la lectura llega a MongoDB, y sirve para comprobar que la segunda lectura sale de la caché (CA-11).
+	@Cacheable(cacheNames = CacheConfig.USERS, key = "#userId")
 	public User get(String userId) {
+		log.info("Usuario {} leído de MongoDB", userId);
 		return repository.findById(userId).orElseThrow(() -> notFound(userId));
 	}
 
+	// Se invalida y no se actualiza la entrada: la próxima lectura la vuelve a cargar desde MongoDB. Si el alta falla,
+	// la entrada queda como estaba.
+	@CacheEvict(cacheNames = CacheConfig.USERS, key = "#userId")
 	public User addAddress(String userId, AddressDto address) {
 		// La condición y el push van en una sola operación atómica. Con "leer, contar y guardar", dos altas
 		// simultáneas sobre un usuario con 9 direcciones lo dejarían con 11 (RN-11).

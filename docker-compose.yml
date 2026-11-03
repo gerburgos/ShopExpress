@@ -34,6 +34,9 @@ services:
     environment:
       SPRING_MONGODB_URI: mongodb://mongodb:27017/users?replicaSet=rs0
       SPRING_DATA_REDIS_HOST: redis
+      # Para medir la latencia sin caché: SPRING_CACHE_TYPE=none docker compose up -d <servicio>.
+      # Sin la variable, la caché es Redis.
+      SPRING_CACHE_TYPE: ${SPRING_CACHE_TYPE:-redis}
     depends_on:
       # Espera a que el replica set tenga primario; si arrancara antes, las primeras escrituras fallarían.
       mongodb:
@@ -48,6 +51,7 @@ services:
     environment:
       SPRING_MONGODB_URI: mongodb://mongodb:27017/catalog?replicaSet=rs0
       SPRING_DATA_REDIS_HOST: redis
+      SPRING_CACHE_TYPE: ${SPRING_CACHE_TYPE:-redis}
     depends_on:
       mongodb:
         condition: service_healthy
