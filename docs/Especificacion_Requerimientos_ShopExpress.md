@@ -4,8 +4,8 @@
 | --- | --- |
 | Proyecto | Tarea 2, NoSQL 2026: sistema de microservicios para comercio electrónico |
 | Fecha | 29 de octubre de 2026 |
-| Versión | 1.4 |
-| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. INC-1 está implementado: el alta, la consulta y la modificación de usuarios y productos pasan la colección Postman. Los demás requisitos todavía no están implementados. |
+| Versión | 1.5 |
+| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. INC-1 está implementado: el alta, la consulta y la modificación de usuarios y productos pasan la colección Postman. INC-2 está implementado: la caché con Redis, su invalidación y la lectura desde MongoDB cuando Redis cae se verificaron, y la latencia se midió con y sin caché. Los demás requisitos todavía no están implementados. |
 | Ubicación | `docs/` del repositorio. Es la única versión vigente de este documento. |
 
 ## 1. Introducción
@@ -152,7 +152,7 @@ Diagrama de componentes UML. La bola marca la interfaz que provee cada servicio,
 | RD-05 | Un lenguaje y framework de la lista de la consigna. Se usa Java con Spring Boot (D-14). | Exigido. |
 | RD-06 | `docker-compose.yml` y un `Dockerfile` por servicio. | Valorado por la consigna; se adopta. |
 | RD-07 | Código y contrato HTTP en inglés; textos para personas en español (Anexo A). | Decisión del estudiante (D-15). |
-| RD-08 | Entorno de desarrollo: JDK 25.0.4.1, Maven 3.10.0 a través del Maven Wrapper de cada servicio, Docker 29.7.2, Docker Compose 5.5.1 y Node.js 24.14.0, este último solo para Newman. Comprobados el 29/10/2026. Las imágenes compilan y ejecutan con Java 25 (`eclipse-temurin:25`). | Entorno del estudiante. |
+| RD-08 | Entorno de desarrollo: JDK 25.0.4.1, Maven 3.10.0 a través del Maven Wrapper de cada servicio, Docker 29.7.2, Docker Compose 5.5.1, Node.js 24.14.0, solo para Newman, y Apache Bench 2.3, solo para la prueba de carga. Comprobados el 29/10/2026. Las imágenes compilan y ejecutan con Java 25 (`eclipse-temurin:25`). | Entorno del estudiante. |
 
 ### 2.5. Supuestos, acuerdos y pendientes
 
@@ -689,7 +689,7 @@ El ejemplo muestra un pedido cancelado por pago rechazado, que todavía tiene pe
 { "_id": "ord_98c1…", "status": "CAPTURED", "authorizationCode": "auth_45a7…", "amount": 51.00 }
 ```
 
-**Redis:** una entrada por usuario y otra por producto, con TTL y un prefijo por servicio. No tiene persistencia, porque todo lo que guarda se puede reconstruir desde MongoDB.
+**Redis:** una entrada por usuario y otra por producto, en JSON y con TTL. La clave lleva como prefijo el nombre de la caché, que pertenece a un solo servicio: `users::usr_…` o `products::prod_…`. No tiene persistencia, porque todo lo que guarda se puede reconstruir desde MongoDB.
 
 ### 3.7. Criterios de aceptación
 
@@ -748,7 +748,7 @@ Cada decisión es la base de la sección "Justificación del diseño" del README
 | D-02 | Una instancia de MongoDB, configurada como replica set de un nodo, con una base por servicio. Redis en una sola instancia, sin persistencia. | Las transacciones requieren replica set. Una base por servicio mantiene a cada servicio como dueño de sus datos. Redis solo guarda lo que se puede reconstruir. | **Una instancia de MongoDB por servicio.** Implica tres replica sets y más memoria, sin beneficio en una demo local. | R-02, R-09, R-15 |
 | D-03 | REST síncrono entre servicios, con timeouts y endpoints internos idempotentes. | Se lee como código secuencial y no agrega infraestructura. | **Broker de mensajes (RabbitMQ o Kafka).** Es otro componente que levantar y explicar, y vuelve asíncrona la respuesta del pedido. Queda como evolución. | — |
 | D-04 | Los ítems de un pedido se reservan en una sola transacción de MongoDB, con un update condicional `stock >= quantity` por ítem. | Todo o nada: si falta stock de un ítem, no queda ninguno reservado. Un conflicto de escritura aborta la transacción, y se reintenta con un límite. | **Reservar ítem por ítem y compensar localmente.** Si el servicio cae a mitad, quedan reservas parciales que hay que detectar y liberar. | R-02, R-03, R-05 |
-| D-05 | Cache-aside con TTL. Las ventas no invalidan la caché; las modificaciones administrativas (RF-09 a RF-11) sí. Si Redis falla, se lee de MongoDB con un `LoggingCacheErrorHandler`. | Los productos más vendidos son los más consultados, y la consigna acepta consistencia eventual en la lectura. Por defecto, Spring propaga los errores de la caché, y eso rompería las lecturas si cae Redis. | **Invalidar en cada venta.** Vaciaría la caché justo en los productos más usados. | R-07, R-08 |
+| D-05 | Cache-aside con TTL. Las ventas no invalidan la caché; las modificaciones administrativas (RF-09 a RF-11) sí. Si Redis falla, se lee de MongoDB y el error queda en el log, con un `CacheErrorHandler` propio (`CacheErrorLogger`). Las escrituras en la caché esperan la respuesta de Redis, y mientras Redis está desconectado, el cliente rechaza las operaciones sin esperar. | Los productos más vendidos son los más consultados, y la consigna acepta consistencia eventual en la lectura. Por defecto, Spring propaga los errores de la caché, y eso rompería las lecturas si cae Redis. El `LoggingCacheErrorHandler` de Spring escribe en inglés. Por defecto, Spring Data Redis guarda e invalida sin esperar: un fallo no quedaba en el log y la respuesta de una modificación podía salir antes de borrar la entrada. Y el cliente encolaba cada operación hasta el timeout: con Redis caído, cada lectura tardaba 0,51 s; ahora tarda unos 10 ms. | **Invalidar en cada venta.** Vaciaría la caché justo en los productos más usados. | R-07, R-08 |
 | D-06 | El pedido único se garantiza con el header `Idempotency-Key` y un índice único en MongoDB. Si llega la misma clave con otro cuerpo, se responde 422; si la original sigue en curso, 409. | El índice lo garantiza en la base, incluso con solicitudes concurrentes. | **Buscar primero y después insertar.** Tiene una condición de carrera. | R-14 |
 | D-07 | Pasarela simulada con autorización, captura y reverso, idempotentes por `orderId`. El resultado se fuerza con `X-Simulated-Payment`. | Separar autorizar de capturar evita mover plata hasta que el stock está asegurado. Si algo falla, se reversa la autorización en lugar de devolver un cobro. Es el modelo de las pasarelas reales. | **Cobrar en un solo paso y compensar con una devolución.** Mueve plata que después hay que devolver. **Pasarela real.** No la exige la consigna y no permite forzar fallas. | R-18, R-19 |
 | D-08 | `POST /api/orders` responde de forma síncrona, con el estado final del pedido. | Es coherente con D-03 y fácil de verificar con Postman. | **Respuesta asíncrona con consulta posterior.** Solo hace falta con un broker. | — |
@@ -773,6 +773,8 @@ Cada decisión es la base de la sección "Justificación del diseño" del README
 | Los pedidos con `requiresAttention` no se resuelven solos. | Hace falta intervenir a mano. | La acción pendiente indica qué faltó, cuántas veces se intentó y el último error. La evolución es un endpoint administrativo para relanzarla. |
 | Si el reverso agota sus intentos, el monto queda retenido. | El cliente ve una retención en su tarjeta. | En las redes reales, una autorización que no se captura vence sola: según Stripe, típicamente a los 7 días en pagos online con tarjeta (R-18). |
 | El usuario se valida con una lectura que puede venir de la caché. | Si existiera el borrado, podría aceptarse un usuario recién borrado. | No hay borrado. Si se agrega, la validación debe leer de MongoDB. |
+| Si Redis ya está caído cuando arranca un servicio, cada lectura tarda alrededor de 1 s. | Las consultas responden bien, desde MongoDB, pero más lentas. | El servicio nunca llegó a conectarse, así que cada operación de la caché intenta conectarse y espera el timeout de 500 ms: con el contenedor detenido, resolver el nombre `redis` tarda unos 990 ms. Se midió que se recupera solo cuando Redis vuelve. Si Redis cae con el servicio andando, las lecturas tardan unos 10 ms. |
+| Si falla una invalidación, puede verse el dato anterior hasta que venza el TTL: 60 s para usuarios y 10 s para productos. | Una consulta puede mostrar un precio o una dirección desactualizados. | El fallo queda en el log. Si la causa es que Redis se cayó, al volver arranca vacío, porque no tiene persistencia. |
 | Las reservas no vencen. | Si Pedidos desaparece para siempre, el stock queda reservado. | El recuperador lo resuelve mientras Pedidos funcione. Un vencimiento automático agregaría una carrera con la autorización. |
 | La reposición (RF-10) no es idempotente. | Si se reintenta, suma dos veces. | Es una operación administrativa de demo. En uso real llevaría `Idempotency-Key`. |
 | El pago es simulado y no hay autenticación. | — | Ambos están fuera del alcance de la consigna. |
@@ -836,7 +838,7 @@ La pre-entrega del jueves 5/11 muestra un avance parcial: la compra funcionando.
 | --- | --- | --- | --- |
 | INC-0 | Mié 28/10 (terminado) | Crear el repositorio y los tres proyectos Spring Boot, y el `docker-compose.yml` con MongoDB (`rs0` inicializado) y Redis. | CA-19, ENT-01 |
 | INC-1 | Jue 29 a vie 30/10 | RF-01 a RF-04, RF-09 y RF-11, con validaciones, índices y DTO. Verificar el tipo de los importes en MongoDB. Colección Postman inicial. | CA-01, CA-02, parte de CA-13 y de CA-18 |
-| INC-2 | Sáb 31/10 | Caché con Redis, `LoggingCacheErrorHandler` e invalidación. Medición con y sin caché. | CA-11, CA-14, CA-18, la parte de caché de CA-16 |
+| INC-2 | Sáb 31/10 (implementado el 29/10) | Caché con Redis, `CacheErrorLogger` e invalidación. Medición con y sin caché. | CA-11, CA-14, CA-18, la parte de caché de CA-16 |
 | INC-3 | Dom 1 a lun 2/11 | INT-01 a INT-03, con transacción y reintento. RF-10. Script de concurrencia. | CA-17, base de CA-04 y CA-07 |
 | INC-4 | Mar 3 a mié 4/11 | RF-05 y RF-06: cadena, orquestador y pasarela simulada (autorizar, capturar y reversar), con el historial del pago. | CA-03, CA-04, CA-06, CA-07, CA-10, CA-16 |
 | — | Jue 5/11 | Pre-entrega: se muestra la compra aprobada, el pago rechazado y la falta de stock. | — |
