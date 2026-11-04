@@ -3,12 +3,14 @@ package com.shopexpress.catalog.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -38,15 +40,28 @@ public class ProductService {
 	}
 
 	public Product create(CreateProductRequest request) {
+		// El SKU es único: se guarda en mayúsculas para que "mate-001" y "MATE-001" no pasen como productos distintos.
 		Product product = new Product(
 				"prod_" + UUID.randomUUID(),
+				request.sku().toUpperCase(Locale.ROOT),
 				request.name(),
 				request.description(),
 				request.categories() == null ? List.of() : request.categories(),
 				normalizePrice(request.price()),
 				request.stock());
-		// insert y no save: save reemplaza el documento si el id ya existe, en lugar de fallar.
-		return repository.insert(product);
+		try {
+			// insert y no save: save reemplaza el documento si el id ya existe, en lugar de fallar.
+			return repository.insert(product);
+		}
+		catch (DuplicateKeyException e) {
+			// La unicidad la garantiza el índice, también con dos altas simultáneas. Consultar antes de insertar
+			// tendría una carrera entre la consulta y el insert.
+			if (String.valueOf(e.getMessage()).contains(Product.SKU_INDEX)) {
+				throw new ApiException(HttpStatus.CONFLICT, "SKU_ALREADY_EXISTS",
+						"Ya existe un producto con el SKU " + product.sku());
+			}
+			throw e;
+		}
 	}
 
 	// Cache-aside: si el producto está en Redis, este método no se ejecuta. Por eso el log de abajo aparece solo cuando

@@ -22,5 +22,7 @@ public record UpdateProductRequest(
 		// stock e id se declaran solo para rechazarlos. Si no estuvieran, Jackson los ignoraría, y el PATCH
 		// respondería 200 sin hacer lo que se pidió. El stock cambia solo sumando o restando (RN-12).
 		@Null(message = "no se modifica con PATCH: cambia solo con reposiciones y ventas") Object stock,
-		@Null(message = "no se puede modificar") Object id) {
+		@Null(message = "no se puede modificar") Object id,
+		// Fijo porque las reservas y los pedidos no lo copian: si cambiara, un pedido viejo mostraría el SKU nuevo (D-19).
+		@Null(message = "no se puede modificar") Object sku) {
 }

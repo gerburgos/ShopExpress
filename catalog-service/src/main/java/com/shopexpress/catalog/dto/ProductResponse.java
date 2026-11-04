@@ -7,6 +7,7 @@ import com.shopexpress.catalog.model.Product;
 
 public record ProductResponse(
 		String id,
+		String sku,
 		String name,
 		String description,
 		List<String> categories,
@@ -14,7 +15,7 @@ public record ProductResponse(
 		int stock) {
 
 	public static ProductResponse from(Product product) {
-		return new ProductResponse(product.id(), product.name(), product.description(), product.categories(),
+		return new ProductResponse(product.id(), product.sku(), product.name(), product.description(), product.categories(),
 				product.price(), product.stock());
 	}
 

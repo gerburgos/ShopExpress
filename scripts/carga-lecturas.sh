@@ -23,9 +23,9 @@ warmup=${WARMUP:-15}
 
 command -v ab > /dev/null || { echo "Falta ab (Apache Bench)." >&2; exit 1; }
 
-# Un producto nuevo en cada corrida, para no depender de datos anteriores.
+# Un producto nuevo en cada corrida, para no depender de datos anteriores. El SKU lleva la hora para no repetirse.
 response=$(curl -fsS -X POST "$url/api/products" -H 'Content-Type: application/json' \
-	-d '{"name":"Producto de la prueba de carga","price":100,"stock":1000}')
+	-d '{"sku":"CARGA-'"$(date +%s%N)"'","name":"Producto de la prueba de carga","price":100,"stock":1000}')
 product_id=$(printf '%s' "$response" | sed -E 's/.*"id":"([^"]+)".*/\1/')
 target="$url/api/products/$product_id"
 

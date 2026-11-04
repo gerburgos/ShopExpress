@@ -9,7 +9,7 @@
       "name": "Usuarios",
       "item": [
         {
-          "name": "Crear usuario con una dirección",
+          "name": "1. Crear usuario con una dirección",
           "event": [
             {
               "listen": "prerequest",
@@ -69,7 +69,7 @@
           }
         },
         {
-          "name": "Consultar el usuario creado",
+          "name": "2. Consultar el usuario creado",
           "event": [
             {
               "listen": "test",
@@ -92,7 +92,7 @@
           }
         },
         {
-          "name": "Email repetido, escrito en mayúsculas",
+          "name": "3. Email repetido, escrito en mayúsculas",
           "event": [
             {
               "listen": "test",
@@ -129,7 +129,7 @@
           }
         },
         {
-          "name": "Documento repetido",
+          "name": "4. Documento repetido",
           "event": [
             {
               "listen": "test",
@@ -166,7 +166,7 @@
           }
         },
         {
-          "name": "Mismo número con otro tipo de documento",
+          "name": "5. Mismo número con otro tipo de documento",
           "event": [
             {
               "listen": "test",
@@ -203,7 +203,7 @@
           }
         },
         {
-          "name": "Tipo de documento fuera de la lista",
+          "name": "6. Tipo de documento fuera de la lista",
           "event": [
             {
               "listen": "test",
@@ -244,7 +244,7 @@
           }
         },
         {
-          "name": "Crear usuario con datos inválidos",
+          "name": "7. Crear usuario con datos inválidos",
           "event": [
             {
               "listen": "test",
@@ -285,7 +285,7 @@
           }
         },
         {
-          "name": "Consultar un usuario inexistente",
+          "name": "8. Consultar un usuario inexistente",
           "event": [
             {
               "listen": "test",
@@ -308,7 +308,7 @@
           }
         },
         {
-          "name": "Agregar una dirección",
+          "name": "9. Agregar una dirección",
           "event": [
             {
               "listen": "test",
@@ -347,7 +347,7 @@
           }
         },
         {
-          "name": "Consultar el usuario: muestra la dirección nueva",
+          "name": "10. Consultar el usuario: muestra la dirección nueva",
           "event": [
             {
               "listen": "test",
@@ -370,7 +370,7 @@
           }
         },
         {
-          "name": "Agregar la dirección número 11",
+          "name": "11. Agregar la dirección número 11",
           "event": [
             {
               "listen": "prerequest",
@@ -429,7 +429,7 @@
           }
         },
         {
-          "name": "Consultar el usuario: sigue con 10 direcciones",
+          "name": "12. Consultar el usuario: sigue con 10 direcciones",
           "event": [
             {
               "listen": "test",
@@ -451,7 +451,7 @@
           }
         },
         {
-          "name": "Agregar una dirección incompleta",
+          "name": "13. Agregar una dirección incompleta",
           "event": [
             {
               "listen": "test",
@@ -492,7 +492,7 @@
           }
         },
         {
-          "name": "Agregar una dirección a un usuario inexistente",
+          "name": "14. Agregar una dirección a un usuario inexistente",
           "event": [
             {
               "listen": "test",
@@ -534,8 +534,18 @@
       "name": "Catálogo",
       "item": [
         {
-          "name": "Crear producto",
+          "name": "1. Crear producto",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// SKU nuevo en cada corrida, porque es único. Se manda en minúsculas para comprobar que se guarda en mayúsculas.",
+                  "pm.collectionVariables.set(\"sku\", \"mate-\" + Date.now().toString(36));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -547,6 +557,7 @@
                   "    pm.expect(product.id).to.match(/^prod_/);",
                   "});",
                   "pm.test(\"Devuelve los datos, el stock y el precio con dos decimales\", () => {",
+                  "    pm.expect(product.sku).to.eql(pm.collectionVariables.get(\"sku\").toUpperCase());",
                   "    pm.expect(product.name).to.eql(\"Mate de calabaza\");",
                   "    pm.expect(product.categories).to.eql([\"hogar\", \"regionales\"]);",
                   "    pm.expect(product.stock).to.eql(10);",
@@ -570,10 +581,10 @@
               }
             ],
             "url": "{{catalogUrl}}/api/products",
-            "description": "CA-02. El precio se manda como 25.5 y se devuelve con dos decimales.",
+            "description": "CA-02. El precio se manda como 25.5 y se devuelve con dos decimales. El SKU se manda en minúsculas y vuelve en mayúsculas.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Mate de calabaza\",\n  \"description\": \"Mate artesanal\",\n  \"categories\": [\n    \"hogar\",\n    \"regionales\"\n  ],\n  \"price\": 25.5,\n  \"stock\": 10\n}",
+              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"name\": \"Mate de calabaza\",\n  \"description\": \"Mate artesanal\",\n  \"categories\": [\n    \"hogar\",\n    \"regionales\"\n  ],\n  \"price\": 25.5,\n  \"stock\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -583,7 +594,7 @@
           }
         },
         {
-          "name": "Consultar el producto creado",
+          "name": "2. Consultar el producto creado",
           "event": [
             {
               "listen": "test",
@@ -606,7 +617,53 @@
           }
         },
         {
-          "name": "Crear producto con datos inválidos",
+          "name": "3. SKU repetido, escrito en mayúsculas",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"skuUpper\", pm.collectionVariables.get(\"sku\").toUpperCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 con el código SKU_ALREADY_EXISTS\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"SKU_ALREADY_EXISTS\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "El SKU se compara en mayúsculas: el del alta, escrito distinto, es el mismo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{skuUpper}}\",\n  \"name\": \"Otro mate\",\n  \"price\": 20,\n  \"stock\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "4. Crear producto con datos inválidos",
           "event": [
             {
               "listen": "test",
@@ -619,7 +676,7 @@
                   "});",
                   "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
                   "    const message = pm.response.json().message;",
-                  "    [\"name\", \"price\", \"stock\", \"categories[1]\"].forEach(field => pm.expect(message).to.include(field));",
+                  "    [\"sku\", \"name\", \"price\", \"stock\", \"categories[1]\"].forEach(field => pm.expect(message).to.include(field));",
                   "});"
                 ]
               }
@@ -637,7 +694,7 @@
             "description": "CA-13. Sin nombre, precio 0, stock negativo y una categoría vacía.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"price\": 0,\n  \"stock\": -1,\n  \"categories\": [\n    \"hogar\",\n    \"\"\n  ]\n}",
+              "raw": "{\n  \"sku\": \"con espacios\",\n  \"price\": 0,\n  \"stock\": -1,\n  \"categories\": [\n    \"hogar\",\n    \"\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -647,7 +704,7 @@
           }
         },
         {
-          "name": "Crear producto con un precio de tres decimales",
+          "name": "5. Crear producto con un precio de tres decimales",
           "event": [
             {
               "listen": "test",
@@ -678,7 +735,7 @@
             "description": "Se rechaza en lugar de redondear, para no cambiar el precio sin avisar.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Bombilla\",\n  \"price\": 9.999,\n  \"stock\": 5\n}",
+              "raw": "{\n  \"sku\": \"BOMB-001\",\n  \"name\": \"Bombilla\",\n  \"price\": 9.999,\n  \"stock\": 5\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -688,7 +745,7 @@
           }
         },
         {
-          "name": "Crear producto con stock decimal",
+          "name": "6. Crear producto con stock decimal",
           "event": [
             {
               "listen": "test",
@@ -715,7 +772,7 @@
             "description": "El stock es entero. Sin configurarlo, Jackson guardaba 2.5 como 2 y respondía 201.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Bombilla\",\n  \"price\": 9.99,\n  \"stock\": 2.5\n}",
+              "raw": "{\n  \"sku\": \"BOMB-001\",\n  \"name\": \"Bombilla\",\n  \"price\": 9.99,\n  \"stock\": 2.5\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -725,7 +782,7 @@
           }
         },
         {
-          "name": "Crear producto con el stock como texto",
+          "name": "7. Crear producto con el stock como texto",
           "event": [
             {
               "listen": "test",
@@ -752,7 +809,7 @@
             "description": "Los números se mandan como números JSON. Sin configurarlo, Jackson convertía \"5\" en 5 y respondía 201.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Bombilla\",\n  \"price\": 9.99,\n  \"stock\": \"5\"\n}",
+              "raw": "{\n  \"sku\": \"BOMB-001\",\n  \"name\": \"Bombilla\",\n  \"price\": 9.99,\n  \"stock\": \"5\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -762,7 +819,7 @@
           }
         },
         {
-          "name": "Consultar un producto inexistente",
+          "name": "8. Consultar un producto inexistente",
           "event": [
             {
               "listen": "test",
@@ -785,7 +842,7 @@
           }
         },
         {
-          "name": "Modificar precio y categorías",
+          "name": "9. Modificar precio y categorías",
           "event": [
             {
               "listen": "test",
@@ -828,7 +885,7 @@
           }
         },
         {
-          "name": "Intentar modificar el stock",
+          "name": "10. Intentar modificar el stock",
           "event": [
             {
               "listen": "test",
@@ -869,7 +926,48 @@
           }
         },
         {
-          "name": "Consultar el producto modificado",
+          "name": "11. Intentar modificar el SKU",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"sku\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products/{{productId}}",
+            "description": "El SKU es fijo: las reservas y los pedidos no lo copian (D-19).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"OTRO-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12. Consultar el producto modificado",
           "event": [
             {
               "listen": "test",
@@ -880,6 +978,7 @@
                   "    pm.response.to.have.status(200);",
                   "    pm.expect(pm.response.text()).to.include('\"price\":30.00');",
                   "    pm.expect(pm.response.json().stock).to.eql(10);",
+                  "    pm.expect(pm.response.json().sku).to.eql(pm.collectionVariables.get(\"sku\").toUpperCase());",
                   "});"
                 ]
               }
@@ -893,7 +992,7 @@
           }
         },
         {
-          "name": "Modificar un producto inexistente",
+          "name": "13. Modificar un producto inexistente",
           "event": [
             {
               "listen": "test",
@@ -955,6 +1054,14 @@
     },
     {
       "key": "createdProduct",
+      "value": ""
+    },
+    {
+      "key": "sku",
+      "value": ""
+    },
+    {
+      "key": "skuUpper",
       "value": ""
     }
   ]

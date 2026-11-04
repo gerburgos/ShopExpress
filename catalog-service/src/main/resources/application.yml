@@ -8,6 +8,9 @@ spring:
     uri: mongodb://localhost:27017/catalog?directConnection=true
   data:
     mongodb:
+      # Crea al arrancar el índice único declarado en Product, que viene apagado por defecto. Sin esto, la anotación
+      # @Indexed no tiene efecto: se verificó que un SKU repetido se guardaba con 201.
+      auto-index-creation: true
       representation:
         # Se midió que, sin esta propiedad, Boot 4.1.2 ya guarda los importes como Decimal128. Se fija igual para
         # no depender del valor por defecto: versiones anteriores de Spring Data los guardaban como String (R-06).
