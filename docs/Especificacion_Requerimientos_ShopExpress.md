@@ -3,8 +3,8 @@
 | | |
 | --- | --- |
 | Proyecto | Tarea 2, NoSQL 2026: sistema de microservicios para comercio electrónico |
-| Fecha | 29 de octubre de 2026 |
-| Versión | 1.5 |
+| Fecha | 3 de noviembre de 2026 |
+| Versión | 1.6 |
 | Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. INC-1 está implementado: el alta, la consulta y la modificación de usuarios y productos pasan la colección Postman. INC-2 está implementado: la caché con Redis, su invalidación y la lectura desde MongoDB cuando Redis cae se verificaron, y la latencia se midió con y sin caché. Los demás requisitos todavía no están implementados. |
 | Ubicación | `docs/` del repositorio. Es la única versión vigente de este documento. |
 
@@ -69,8 +69,6 @@ El sistema expone una API REST, persiste en MongoDB y usa Redis como caché de l
 | R-13 | [Microsoft Azure: Saga design pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/saga) |
 | R-14 | [IETF: The Idempotency-Key HTTP Header Field, borrador 08](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/) |
 | R-15 | [microservices.io: Database per service](https://microservices.io/patterns/data/database-per-service.html) |
-| R-16 | [Quarkus: MongoDB with Panache](https://quarkus.io/guides/mongodb-panache) |
-| R-17 | [Quarkus: Redis Cache](https://quarkus.io/guides/cache-redis-reference) |
 | R-18 | [Stripe: Place a hold on a payment method](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method) |
 | R-19 | [Adyen: Capture](https://docs.adyen.com/online-payments/capture) |
 | R-20 | [Spring PetClinic Microservices: repositorio y `docker-compose.yml`](https://github.com/spring-petclinic/spring-petclinic-microservices) |
@@ -279,10 +277,14 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 #### Servicio de Catálogo e Inventario
 
 **RF-03. Crear producto.** `POST /api/products`. Exigido, P1. CA-02.
-- **Obligatorios:** `name`, `price` (mayor que 0, con hasta dos decimales) y `stock` (entero, 0 o más).
+- **Obligatorios:** `sku`, `name`, `price` (mayor que 0, con hasta dos decimales) y `stock` (entero, 0 o más).
 - Un precio con más de dos decimales se rechaza, en lugar de redondearlo: redondear cambiaría el precio sin avisar.
+- **SKU:** el código del producto para las personas. Admite letras, números y guiones entre ellos, sin espacios, hasta 32 caracteres. Es único, se guarda en mayúsculas para que `mate-001` y `MATE-001` no pasen como dos productos, y no se modifica. Las rutas, las reservas y los pedidos usan el `id` (D-19).
 - **Opcionales:** `description` y `categories` (lista de nombres).
-- **Respuestas:** 201 con el producto y su `id`; 400.
+- **Respuestas:**
+  - 201 con el producto y su `id`;
+  - 400 si falla una validación;
+  - 409 si el SKU ya existe (`SKU_ALREADY_EXISTS`).
 
 **RF-04. Consultar producto y stock.** `GET /api/products/{productId}`. Exigido, P1. CA-02, CA-10, CA-11.
 - Puede responder desde la caché. El stock que muestra puede estar atrasado hasta un TTL (RNF-01).
@@ -291,7 +293,7 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 **RF-09. Modificar producto.** `PATCH /api/products/{productId}`. P2. CA-16.
 - Acepta `name`, `description`, `categories` y `price`, con las mismas reglas que el alta. Un campo ausente o `null` no se modifica.
 - Escribe solo los campos recibidos, sin reescribir el documento entero: reescribirlo pisaría el stock de una reserva concurrente (RN-12).
-- Rechaza `stock` e `id` (RN-12).
+- Rechaza `stock` (RN-12), `id` y `sku` (D-19).
 - Invalida la caché del producto.
 - **Respuestas:** 200 con el producto actualizado; 400; 404.
 
@@ -620,11 +622,12 @@ Una instancia de MongoDB configurada como replica set de un nodo (`rs0`), con un
 }
 ```
 
-**`catalog.products`.** `stock` es el disponible, ya descontadas las reservas.
+**`catalog.products`.** `stock` es el disponible, ya descontadas las reservas. Índice único sobre `sku`.
 
 ```json
 {
   "_id": "prod_7d10…",
+  "sku": "MATE-CAL-001",
   "name": "Mate de calabaza",
   "description": "Mate artesanal",
   "categories": ["hogar", "regionales"],
@@ -757,11 +760,12 @@ Cada decisión es la base de la sección "Justificación del diseño" del README
 | D-11 | Importes en `BigDecimal` y `Decimal128`, en una sola moneda (UYU). Rige el precio vigente al reservar. | La representación decimal es exacta, y el precio se lee de la base, no de la caché. | **`double`.** No representa exactamente valores como 0,10. | R-06 |
 | D-12 | Los manejadores de la cadena son los pasos de la SAGA. Se reserva antes de autorizar, y la confirmación de la reserva es el pivote. | La falta de stock se resuelve sin tocar la pasarela, y el monto autorizado sale de los precios de la reserva. Una vez confirmada, la reserva no se puede liberar, así que desde ahí solo se avanza. | **Autorizar antes de reservar.** Cada falta de stock exigiría un reverso, y el monto se calcularía antes de conocer los precios de la reserva. | R-13 |
 | D-13 | Altas y consultas exigidas, más tres modificaciones (RF-09 a RF-11). Sin borrados. | Las modificaciones hacen demostrables la invalidación de la caché, la copia del precio en el pedido y el modelado embebido. | **CRUD completo.** Los borrados afectan a los pedidos y al historial que referencian los datos. | — |
-| D-14 | Java con Spring Boot. | Está en la lista de la consigna, es la tecnología que más domina el estudiante, y las decisiones están verificadas contra su documentación. | **Quarkus.** No está en la lista de la consigna, y su backend de caché sobre Redis está en estado preview. | R-16, R-17 |
+| D-14 | Java con Spring Boot. | Está en la lista de la consigna, es la tecnología que más domina el estudiante, y las decisiones están verificadas contra su documentación. | — | — |
 | D-15 | Código y contrato HTTP en inglés; textos para personas en español. | Un solo idioma en el código y en la API. El diseño permite volver al español con poco costo (Anexo A.1). | **Contrato en español traducido en los DTO.** | — |
 | D-16 | El estado del pedido solo dice cómo terminó la compra (`PROCESSING`, `CONFIRMED` o `CANCELLED` con motivo). El trabajo interno va en `pendingActions` y `requiresAttention`, y el pago guarda su historial. | Separa lo que le importa al cliente de lo que le importa a quien opera el sistema, y deja trazado cada intento de pago. | **Estados como `COMPENSATING`, `UNKNOWN` o `REQUIRES_ATTENTION` en el mismo campo.** Mezclan el resultado de la compra con el trabajo pendiente. | — |
 | D-17 | Reintentos acotados y configurables en dos niveles: dentro de la solicitud, con espera exponencial, y en el recuperador. Solo se reintentan las fallas transitorias, siempre con la misma clave. | Los cortes breves se resuelven sin que el cliente lo note, y las caídas largas no bloquean la respuesta. Usar la misma clave hace que reintentar no duplique efectos. | **Reintentar sin límite.** Un servicio caído durante horas dejaría pedidos reintentándose para siempre, sin que nadie se entere. | — |
 | D-18 | Cada servicio se llama `<dominio>-service`: `users-service`, `catalog-service` y `orders-service`. El mismo nombre se usa en el directorio, el servicio de Compose, `spring.application.name` y el `artifactId`. Las bases conservan el nombre del dominio: `users`, `catalog` y `orders`. | Es la convención del ejemplo de microservicios de la comunidad Spring. El sufijo distingue al servicio de su base. Un nombre único evita traducir entre capas, y en Compose ese nombre también es el hostname con el que los servicios se llaman entre sí. | **`<entidad>-manager`.** No lo usa ninguno de los ejemplos consultados, y `product-manager` nombra el catálogo pero no el inventario, que es otra capacidad de negocio. **Nombre corto en el servicio y sufijo `db` en la base, como eShop.** Obliga a renombrar las bases del modelo de datos. | R-20 a R-23 |
+| D-19 | Cada producto tiene un `id` que genera el servidor (`prod_` y un UUID) y un `sku` que carga el administrador: único, en mayúsculas y fijo. Las rutas, las reservas y los pedidos usan el `id`. | La consigna no fija el formato del identificador. El `id` no cambia nunca y nadie tiene que inventarlo, y el `sku` da un código legible para las personas. Como el `sku` es fijo, las reservas y los pedidos no lo copian: con el `productId` siempre se llega al mismo. | **El SKU como `_id`.** En MongoDB el `_id` no se puede modificar, y las reservas y los pedidos lo copian: un SKU mal cargado obligaría a crear otro producto. **SKU modificable.** Habría que copiarlo en cada reserva y pedido, para que un pedido viejo no muestre el SKU nuevo. | — |
 
 ## 5. Limitaciones conocidas
 
