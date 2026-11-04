@@ -14,6 +14,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.shopexpress.catalog.dto.CreateProductRequest;
 import com.shopexpress.catalog.dto.ProductResponse;
+import com.shopexpress.catalog.dto.RestockRequest;
 import com.shopexpress.catalog.dto.UpdateProductRequest;
 import com.shopexpress.catalog.model.Product;
 import com.shopexpress.catalog.service.ProductService;
@@ -46,6 +47,12 @@ public class ProductController {
 	@PatchMapping("/{productId}")
 	public ProductResponse update(@PathVariable String productId, @Valid @RequestBody UpdateProductRequest request) {
 		return ProductResponse.from(service.update(productId, request));
+	}
+
+	// POST a una acción y no PATCH del stock: el PATCH fija valores, y el stock solo cambia sumando o restando (RN-12).
+	@PostMapping("/{productId}/restock")
+	public ProductResponse restock(@PathVariable String productId, @Valid @RequestBody RestockRequest request) {
+		return ProductResponse.from(service.restock(productId, request.quantity()));
 	}
 
 }

@@ -104,6 +104,21 @@ public class ProductService {
 		return updated;
 	}
 
+	// RF-10. A diferencia de las ventas, invalida la caché: es una modificación administrativa, y quien repone espera
+	// ver el stock nuevo enseguida (D-05).
+	// No es idempotente: si se repite, suma dos veces. Se acepta porque es una operación de demo (sección 5).
+	@CacheEvict(cacheNames = CacheConfig.PRODUCTS, key = "#productId")
+	public Product restock(String productId, int quantity) {
+		// $inc atómico sobre el documento: una reserva concurrente también resta con $inc, y las dos se aplican sin
+		// pisarse (RN-12).
+		Product restocked = mongoTemplate.findAndModify(Query.query(Criteria.where("id").is(productId)),
+				new Update().inc("stock", quantity), FindAndModifyOptions.options().returnNew(true), Product.class);
+		if (restocked == null) {
+			throw notFound(productId);
+		}
+		return restocked;
+	}
+
 	// La API muestra los importes con dos decimales: 25.5 se guarda como 25.50. La validación ya rechazó más de dos
 	// decimales, así que UNNECESSARY nunca redondea: si llegara a hacerlo, falla.
 	private static BigDecimal normalizePrice(BigDecimal price) {
