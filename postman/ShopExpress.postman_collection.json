@@ -1029,6 +1029,378 @@
           }
         }
       ]
+    },
+    {
+      "name": "Reservas",
+      "description": "INT-01: los endpoints internos que usa Pedidos para reservar stock. Se corre en orden.",
+      "item": [
+        {
+          "name": "1. Crear el Mate, con 5 unidades",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Valores nuevos en cada corrida: el SKU y los orderId son únicos.",
+                  "const runId = Date.now().toString(36);",
+                  "pm.collectionVariables.set(\"reservaRunId\", runId.toUpperCase());",
+                  "pm.collectionVariables.set(\"orderId\", \"ord_\" + runId + \"-1\");",
+                  "pm.collectionVariables.set(\"orderId2\", \"ord_\" + runId + \"-2\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"mateId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "Producto para las pruebas de reserva. Es nuevo en cada corrida, así el stock arranca siempre en 5.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"MATE-{{reservaRunId}}\",\n  \"name\": \"Mate\",\n  \"price\": 25.5,\n  \"stock\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "2. Crear el Termo, con 1 unidad",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"termoId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "Con una sola unidad, para que un pedido de dos no alcance.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"TERMO-{{reservaRunId}}\",\n  \"name\": \"Termo\",\n  \"price\": 40,\n  \"stock\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "3. Reservar 2 Mates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const reservation = pm.response.json();",
+                  "pm.test(\"Responde 200 con la reserva en RESERVED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(reservation.orderId).to.eql(pm.collectionVariables.get(\"orderId\"));",
+                  "    pm.expect(reservation.status).to.eql(\"RESERVED\");",
+                  "});",
+                  "pm.test(\"Devuelve el nombre y el precio del Mate\", () => {",
+                  "    pm.expect(reservation.items[0].name).to.eql(\"Mate\");",
+                  "    pm.expect(reservation.items[0].quantity).to.eql(2);",
+                  "    pm.expect(pm.response.text()).to.include('\"unitPrice\":25.50');",
+                  "});",
+                  "pm.collectionVariables.set(\"reservation\", JSON.stringify(reservation));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/internal/reservations",
+            "description": "INT-01. Lo llama Pedidos, no el cliente. Descuenta el stock y devuelve el nombre y el precio vigentes, leídos de MongoDB.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{mateId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "4. Repetir la misma reserva",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con la misma reserva\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.eql(JSON.parse(pm.collectionVariables.get(\"reservation\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/internal/reservations",
+            "description": "RN-03. Es lo que hace Pedidos cuando no le llegó la respuesta. Devuelve la misma reserva y no descuenta otra vez: el pedido 6 lo comprueba.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{mateId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "5. Reservar 1 Mate y 2 Termos: no alcanzan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 con el código OUT_OF_STOCK\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"OUT_OF_STOCK\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra al Termo\", () => {",
+                  "    pm.expect(pm.response.json().message).to.include(pm.collectionVariables.get(\"termoId\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/internal/reservations",
+            "description": "D-04. Todo o nada: el Mate alcanza y va primero, pero como el Termo no alcanza, la transacción se deshace entera. El pedido 6 comprueba que el Mate no bajó.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId2}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{mateId}}\",\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"{{termoId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "6. Consultar el Mate: quedan 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con el stock en 3\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().stock).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{catalogUrl}}/api/products/{{mateId}}",
+            "description": "5 - 2 = 3: ni la repetición (4) ni la reserva fallida (5) descontaron. Es la primera consulta del Mate, así que se lee de MongoDB y no de la caché."
+          }
+        },
+        {
+          "name": "7. Consultar el Termo: sigue en 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con el stock en 1\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().stock).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{catalogUrl}}/api/products/{{termoId}}",
+            "description": "La reserva fallida no lo tocó."
+          }
+        },
+        {
+          "name": "8. Reservar un producto inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 con el código PRODUCT_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"PRODUCT_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/internal/reservations",
+            "description": "Pedidos cancela con otro motivo que la falta de stock, por eso el código es distinto.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ord_inexistente\",\n  \"items\": [\n    {\n      \"productId\": \"prod_no-existe\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "9. Reservar con el mismo producto dos veces",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/internal/reservations",
+            "description": "RN-10. Un pedido no repite productos entre sus ítems.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ord_repetido\",\n  \"items\": [\n    {\n      \"productId\": \"{{mateId}}\",\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"{{mateId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "10. Reservar sin orderId y con cantidad 0",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada campo con problemas\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"orderId\", \"items[0].quantity\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/internal/reservations",
+            "description": "El orderId falta y la cantidad no es positiva: el mensaje nombra los dos campos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{mateId}}\",\n      \"quantity\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -1062,6 +1434,30 @@
     },
     {
       "key": "skuUpper",
+      "value": ""
+    },
+    {
+      "key": "reservaRunId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "orderId2",
+      "value": ""
+    },
+    {
+      "key": "mateId",
+      "value": ""
+    },
+    {
+      "key": "termoId",
+      "value": ""
+    },
+    {
+      "key": "reservation",
       "value": ""
     }
   ]

@@ -35,3 +35,8 @@ server:
 cache:
   products:
     ttl-seconds: 10
+
+catalog:
+  reservation:
+    # Intentos de la transacción de reserva cuando choca con otra operación sobre los mismos productos (D-04).
+    max-transaction-attempts: 3
