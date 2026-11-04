@@ -1032,7 +1032,7 @@
     },
     {
       "name": "Reservas",
-      "description": "INT-01: los endpoints internos que usa Pedidos para reservar stock. Se corre en orden.",
+      "description": "INT-01 a INT-03: los endpoints internos que usa Pedidos para reservar, confirmar y liberar stock. Se corre en orden.",
       "item": [
         {
           "name": "1. Crear el Mate, con 5 unidades",
@@ -1046,7 +1046,9 @@
                   "const runId = Date.now().toString(36);",
                   "pm.collectionVariables.set(\"reservaRunId\", runId.toUpperCase());",
                   "pm.collectionVariables.set(\"orderId\", \"ord_\" + runId + \"-1\");",
-                  "pm.collectionVariables.set(\"orderId2\", \"ord_\" + runId + \"-2\");"
+                  "pm.collectionVariables.set(\"orderId2\", \"ord_\" + runId + \"-2\");",
+                  "pm.collectionVariables.set(\"orderId3\", \"ord_\" + runId + \"-3\");",
+                  "pm.collectionVariables.set(\"orderId4\", \"ord_\" + runId + \"-4\");"
                 ]
               }
             },
@@ -1399,6 +1401,323 @@
               }
             }
           }
+        },
+        {
+          "name": "11. Confirmar la reserva de 2 Mates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con status CONFIRMED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"CONFIRMED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{catalogUrl}}/internal/reservations/{{orderId}}/confirm",
+            "description": "INT-03, el pivote de la compra: Pedidos confirma cuando el pago se autorizó. Desde acá el stock queda vendido."
+          }
+        },
+        {
+          "name": "12. Repetir la confirmación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con status CONFIRMED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"CONFIRMED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{catalogUrl}}/internal/reservations/{{orderId}}/confirm",
+            "description": "RN-03. Repetirla no tiene efecto: devuelve la reserva confirmada."
+          }
+        },
+        {
+          "name": "13. Liberar una reserva confirmada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 con el código RESERVATION_CONFIRMED\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RESERVATION_CONFIRMED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{catalogUrl}}/internal/reservations/{{orderId}}/release",
+            "description": "RN-09. Después del pivote no se devuelve stock vendido. Si Pedidos lo pide, es un error, y Catálogo avisa."
+          }
+        },
+        {
+          "name": "14. Crear la Bombilla, con 4 unidades",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"bombillaId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "Producto nuevo para la liberación. No se consulta hasta el final, así la consulta lee de MongoDB y no de la caché.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"BOMB-{{reservaRunId}}\",\n  \"name\": \"Bombilla\",\n  \"price\": 12,\n  \"stock\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "15. Reservar 1 Bombilla",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con status RESERVED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"RESERVED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/internal/reservations",
+            "description": "La Bombilla baja de 4 a 3.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId3}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{bombillaId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16. Liberar la reserva de la Bombilla",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con status RELEASED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"RELEASED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{catalogUrl}}/internal/reservations/{{orderId3}}/release",
+            "description": "INT-02, la compensación: Pedidos libera cuando el pago se rechazó. La Bombilla vuelve a 4."
+          }
+        },
+        {
+          "name": "17. Repetir la liberación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con status RELEASED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"RELEASED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{catalogUrl}}/internal/reservations/{{orderId3}}/release",
+            "description": "RN-06. Liberar dos veces no devuelve el stock dos veces: el pedido 21 comprueba que la Bombilla quedó en 4 y no en 5."
+          }
+        },
+        {
+          "name": "18. Confirmar una reserva liberada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 con el código RESERVATION_RELEASED\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RESERVATION_RELEASED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{catalogUrl}}/internal/reservations/{{orderId3}}/confirm",
+            "description": "F-08. La reserva ya no está vigente: Pedidos reversa la autorización del pago."
+          }
+        },
+        {
+          "name": "19. Liberar un pedido que nunca se reservó: deja una lápida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con status RELEASED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"RELEASED\");",
+                  "});",
+                  "pm.test(\"La lápida no tiene ítems\", () => pm.expect(pm.response.json().items).to.eql([]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{catalogUrl}}/internal/reservations/{{orderId4}}/release",
+            "description": "F-05. Pedidos libera cuando no supo si la reserva llegó. No había nada, así que queda una reserva liberada y vacía."
+          }
+        },
+        {
+          "name": "20. Reservar después de la lápida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 con el código RESERVATION_RELEASED\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RESERVATION_RELEASED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/internal/reservations",
+            "description": "RN-09. La reserva que llega tarde encuentra la lápida y no descuenta stock de un pedido ya cancelado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId4}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{bombillaId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "21. Consultar la Bombilla: vuelve a 4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con el stock en 4\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().stock).to.eql(4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{catalogUrl}}/api/products/{{bombillaId}}",
+            "description": "4 - 1 + 1 = 4: la liberación devolvió la unidad una sola vez, y la reserva después de la lápida no descontó."
+          }
+        },
+        {
+          "name": "22. Confirmar un pedido inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 con el código RESERVATION_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RESERVATION_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{catalogUrl}}/internal/reservations/ord_no-existe/confirm",
+            "description": "En el flujo normal no pasa: Pedidos confirma después de reservar."
+          }
         }
       ]
     }
@@ -1458,6 +1777,18 @@
     },
     {
       "key": "reservation",
+      "value": ""
+    },
+    {
+      "key": "orderId3",
+      "value": ""
+    },
+    {
+      "key": "orderId4",
+      "value": ""
+    },
+    {
+      "key": "bombillaId",
       "value": ""
     }
   ]

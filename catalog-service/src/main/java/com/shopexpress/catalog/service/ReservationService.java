@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,29 +45,105 @@ public class ReservationService {
 		this.maxAttempts = maxAttempts;
 	}
 
-	// INT-01. El reintento va afuera de la transacción: cuando MongoDB aborta una transacción, no se puede seguir
-	// usando, y hay que empezar otra desde cero.
+	// INT-01.
 	public Reservation reserve(ReserveRequest request) {
 		rejectRepeatedProducts(request);
+		return inTransactionWithRetry(request.orderId(), () -> reserveInTransaction(request));
+	}
+
+	// INT-03, el pivote de la compra. Sin transacción: cambia un solo documento, y un update condicional sobre un
+	// documento ya es atómico. La condición status = RESERVED hace que, si llegan a la vez una confirmación y una
+	// liberación, gane una sola.
+	public Reservation confirm(String orderId) {
+		Query reserved = Query.query(Criteria.where("orderId").is(orderId).and("status").is(ReservationStatus.RESERVED));
+		Update toConfirmed = new Update().set("status", ReservationStatus.CONFIRMED).set("updatedAt", Instant.now());
+		Reservation confirmed = mongoTemplate.findAndModify(reserved, toConfirmed,
+				FindAndModifyOptions.options().returnNew(true), Reservation.class);
+		if (confirmed != null) {
+			return confirmed;
+		}
+		// No estaba RESERVED: se lee para responder por qué.
+		Reservation current = mongoTemplate.findById(orderId, Reservation.class);
+		if (current == null) {
+			// En el flujo normal no pasa, porque Pedidos confirma después de reservar: sería un error de programación.
+			// 404 y no 409, para que en el log se distinga de una reserva que se perdió en una carrera.
+			throw new ApiException(HttpStatus.NOT_FOUND, "RESERVATION_NOT_FOUND",
+					"No existe la reserva del pedido " + orderId);
+		}
+		if (current.status() == ReservationStatus.RELEASED) {
+			// La reserva se liberó antes de confirmarse: el stock ya volvió y no se puede vender. Pedidos reversa la
+			// autorización del pago (F-08).
+			throw released(orderId);
+		}
+		// Ya estaba CONFIRMED: Pedidos repitió la llamada porque no le llegó la respuesta (RN-03).
+		return current;
+	}
+
+	// INT-02, la compensación. En una transacción porque cambian varios documentos: el estado de la reserva y el stock
+	// de cada producto. Si el servicio cae a mitad, no puede quedar la reserva liberada sin el stock devuelto.
+	public Reservation release(String orderId) {
+		return inTransactionWithRetry(orderId, () -> releaseInTransaction(orderId));
+	}
+
+	// El reintento va afuera de la transacción: cuando MongoDB aborta una transacción, no se puede seguir usando, y hay
+	// que empezar otra desde cero.
+	private Reservation inTransactionWithRetry(String orderId, Supplier<Reservation> work) {
 		for (int attempt = 1; ; attempt++) {
 			try {
-				return transactionTemplate.execute(status -> reserveInTransaction(request));
+				return transactionTemplate.execute(status -> work.get());
 			} catch (DataAccessException e) {
 				if (!isRetryable(e)) {
 					throw e;
 				}
 				if (attempt == maxAttempts) {
-					log.warn("La reserva del pedido {} chocó con otras operaciones en los {} intentos", request.orderId(),
+					log.warn("La operación sobre la reserva del pedido {} chocó con otras en los {} intentos", orderId,
 							maxAttempts);
 					// 503 y no 409: no es un resultado definitivo como la falta de stock. Pedidos lo trata como una
 					// falla transitoria y repite la llamada con el mismo orderId (D-17).
 					throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "RESERVATION_CONFLICT",
-							"La reserva chocó con otras operaciones sobre los mismos productos; reintentar");
+							"La operación chocó con otras sobre los mismos productos; reintentar");
 				}
-				log.info("La reserva del pedido {} chocó con otra operación (intento {} de {}); se reintenta",
-						request.orderId(), attempt, maxAttempts);
+				log.info("La operación sobre la reserva del pedido {} chocó con otra (intento {} de {}); se reintenta",
+						orderId, attempt, maxAttempts);
 			}
 		}
+	}
+
+	private Reservation releaseInTransaction(String orderId) {
+		Instant now = Instant.now();
+		Reservation existing = mongoTemplate.findById(orderId, Reservation.class);
+		if (existing == null) {
+			// Lápida: Pedidos libera cuando no supo si la reserva llegó a hacerse (F-05). Si la reserva está todavía en
+			// camino y llega después, encuentra esta reserva liberada y no descuenta stock de un pedido cancelado.
+			return mongoTemplate.insert(new Reservation(orderId, ReservationStatus.RELEASED, List.of(), now, now));
+		}
+		if (existing.status() == ReservationStatus.RELEASED) {
+			// Ya liberada: Pedidos repitió la compensación. Devolver el stock otra vez sería sumarlo dos veces (RN-06).
+			return existing;
+		}
+		if (existing.status() == ReservationStatus.CONFIRMED) {
+			// Después del pivote el stock ya está vendido (RN-09). Si Pedidos lo pide, es un error, y se avisa en lugar
+			// de ignorarlo.
+			throw new ApiException(HttpStatus.CONFLICT, "RESERVATION_CONFIRMED",
+					"La reserva del pedido " + orderId + " ya fue confirmada y no se puede liberar");
+		}
+		for (ReservedItem item : existing.items()) {
+			// Se suma lo reservado, no se fija el valor: fijarlo pisaría otra reserva o una reposición (RN-12). Los
+			// productos no se borran (D-13), así que el producto siempre existe.
+			mongoTemplate.updateFirst(Query.query(Criteria.where("id").is(item.productId())),
+					new Update().inc("stock", item.quantity()), Product.class);
+		}
+		// save reemplaza la reserva que se leyó al principio. Si una confirmación la cambió en el medio, MongoDB aborta
+		// la transacción por conflicto de escritura, el reintento la lee CONFIRMED y responde 409: no se devuelve stock
+		// vendido.
+		Reservation released = new Reservation(orderId, ReservationStatus.RELEASED, existing.items(),
+				existing.createdAt(), now);
+		return mongoTemplate.save(released);
+	}
+
+	private static ApiException released(String orderId) {
+		return new ApiException(HttpStatus.CONFLICT, "RESERVATION_RELEASED",
+				"La reserva del pedido " + orderId + " ya fue liberada");
 	}
 
 	private Reservation reserveInTransaction(ReserveRequest request) {
@@ -77,8 +154,7 @@ public class ReservationService {
 			if (existing.status() == ReservationStatus.RELEASED) {
 				// Una reserva liberada, o una lápida, significa que el pedido ya se canceló: una llamada que llega
 				// tarde no puede volver a descontar stock (RN-09).
-				throw new ApiException(HttpStatus.CONFLICT, "RESERVATION_RELEASED",
-						"La reserva del pedido " + request.orderId() + " ya fue liberada");
+				throw released(request.orderId());
 			}
 			return existing;
 		}

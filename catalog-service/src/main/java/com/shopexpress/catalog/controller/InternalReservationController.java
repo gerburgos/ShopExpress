@@ -1,5 +1,6 @@
 package com.shopexpress.catalog.controller;
 
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,18 @@ public class InternalReservationController {
 	@PostMapping
 	public ReservationResponse reserve(@Valid @RequestBody ReserveRequest request) {
 		return ReservationResponse.from(service.reserve(request));
+	}
+
+	// POST y no PATCH del estado: son acciones con reglas propias (la confirmación es el pivote, la liberación devuelve
+	// stock), y la ruta dice cuál se pide.
+	@PostMapping("/{orderId}/confirm")
+	public ReservationResponse confirm(@PathVariable String orderId) {
+		return ReservationResponse.from(service.confirm(orderId));
+	}
+
+	@PostMapping("/{orderId}/release")
+	public ReservationResponse release(@PathVariable String orderId) {
+		return ReservationResponse.from(service.release(orderId));
 	}
 
 }
