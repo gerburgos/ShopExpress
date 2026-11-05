@@ -106,8 +106,12 @@ public class OrderOrchestrator {
 			}
 			catch (RuntimeException e) {
 				// Se sigue con los demás: que falle liberar la reserva no puede impedir cancelar el pedido. Lo que no
-				// se pudo compensar queda en el log; las acciones pendientes que lo reintentan llegan en INC-5.
-				log.warn("Pedido {}: no se pudo compensar {}. Causa: {}", order.getId(), step.name(), e.getMessage());
+				// se pudo compensar queda como acción pendiente, y el recuperador lo reintenta.
+				log.warn("Pedido {}: no se pudo compensar {}; queda pendiente. Causa: {}", order.getId(), step.name(),
+						e.getMessage());
+				if (step.compensationAction() != null) {
+					order.addPendingAction(step.compensationAction(), e.getMessage());
+				}
 			}
 		}
 		// El pedido cancelado lo guarda finish(), junto con el lease borrado.

@@ -10,6 +10,7 @@ import com.shopexpress.orders.client.RejectedException;
 import com.shopexpress.orders.client.ServiceUnavailableException;
 import com.shopexpress.orders.model.CancellationReason;
 import com.shopexpress.orders.model.Order;
+import com.shopexpress.orders.model.PendingAction;
 import com.shopexpress.orders.saga.OrderContext;
 import com.shopexpress.orders.saga.OrderHandler;
 import com.shopexpress.orders.saga.Retrier;
@@ -55,7 +56,7 @@ public class StockReserver extends OrderHandler {
 			// Se agotaron los intentos y no se sabe si la reserva se hizo: la respuesta pudo perderse después de que
 			// Catálogo descontara. Se libera por las dudas; si nunca llegó, la liberación deja una lápida y la reserva
 			// tardía no descuenta (F-05).
-			releaseQuietly(order.getId());
+			releaseQuietly(order);
 			throw new StepFailedException(CancellationReason.CATALOG_UNAVAILABLE, e.getMessage());
 		}
 	}
@@ -66,17 +67,25 @@ public class StockReserver extends OrderHandler {
 		release(context.getOrder().getId());
 	}
 
+	@Override
+	public PendingAction.Type compensationAction() {
+		return PendingAction.Type.RELEASE_RESERVATION;
+	}
+
 	private void release(String orderId) {
 		retrier.call("Pedido " + orderId + ": liberar la reserva", attempt -> catalogClient.release(orderId));
 	}
 
-	private void releaseQuietly(String orderId) {
+	private void releaseQuietly(Order order) {
 		try {
-			release(orderId);
+			release(order.getId());
 		}
 		catch (RuntimeException e) {
-			log.warn("Pedido {}: no se pudo liberar la reserva después de que Catálogo no respondiera. Causa: {}",
-					orderId, e.getMessage());
+			// Catálogo sigue sin responder: el recuperador lo reintenta cuando vuelva, así no queda stock reservado de
+			// un pedido cancelado (CA-15).
+			order.addPendingAction(PendingAction.Type.RELEASE_RESERVATION, e.getMessage());
+			log.warn("Pedido {}: no se pudo liberar la reserva; queda pendiente. Causa: {}", order.getId(),
+					e.getMessage());
 		}
 	}
 

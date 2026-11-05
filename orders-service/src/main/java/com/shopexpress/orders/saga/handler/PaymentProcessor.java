@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import com.shopexpress.orders.model.CancellationReason;
 import com.shopexpress.orders.model.Order;
 import com.shopexpress.orders.model.Payment;
+import com.shopexpress.orders.model.PendingAction;
 import com.shopexpress.orders.model.PaymentStatus;
 import com.shopexpress.orders.payment.Authorization;
 import com.shopexpress.orders.payment.GatewayTimeoutException;
@@ -95,8 +96,9 @@ public class PaymentProcessor extends OrderHandler {
 			payment.setStatus(PaymentStatus.REVERSED);
 		}
 		catch (RuntimeException e) {
-			// Queda REVERSAL_PENDING; la acción pendiente REVERSE_PAYMENT lo reintenta en segundo plano.
+			// Queda REVERSAL_PENDING, y el recuperador reintenta el reverso en segundo plano.
 			payment.record("REVERSE", "ERROR", 1, e.getMessage());
+			order.addPendingAction(PendingAction.Type.REVERSE_PAYMENT, e.getMessage());
 			log.warn("Pedido {}: no se pudo reversar la autorización. Causa: {}", order.getId(), e.getMessage());
 		}
 	}

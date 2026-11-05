@@ -10,6 +10,7 @@ import com.shopexpress.orders.client.ServiceUnavailableException;
 import com.shopexpress.orders.model.CancellationReason;
 import com.shopexpress.orders.model.Order;
 import com.shopexpress.orders.model.OrderStatus;
+import com.shopexpress.orders.model.PendingAction;
 import com.shopexpress.orders.saga.OrderContext;
 import com.shopexpress.orders.saga.OrderHandler;
 import com.shopexpress.orders.saga.Retrier;
@@ -46,7 +47,8 @@ public class OrderConfirmer extends OrderHandler {
 		catch (ServiceUnavailableException e) {
 			// Se agotaron los intentos y no se sabe si la confirmación entró: no se puede compensar, porque quizás el
 			// stock ya está vendido, ni avanzar, porque quizás no. El pedido queda PROCESSING y la respuesta es 202
-			// (F-09). La acción pendiente CONFIRM_RESERVATION que lo resuelve llega en INC-5.
+			// (F-09). El recuperador vuelve a confirmar: si da 200, completa la compra; si da 409, la cancela.
+			order.addPendingAction(PendingAction.Type.CONFIRM_RESERVATION, e.getMessage());
 			log.warn("Pedido {}: Catálogo no respondió al confirmar la reserva. Queda PROCESSING. Causa: {}",
 					order.getId(), e.getMessage());
 			context.stop();

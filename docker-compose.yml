@@ -69,6 +69,8 @@ services:
       # Para alargar una compra y poder detener un servicio a mitad: SAGA_STEP_DELAY_MS=3000 docker compose up -d
       # orders-service.
       SAGA_STEP_DELAY_MS: ${SAGA_STEP_DELAY_MS:-0}
+      # Para ver un pedido que agota los intentos del recuperador (CA-21) sin esperar 10 pasadas.
+      SAGA_RECOVERY_MAX_ATTEMPTS: ${SAGA_RECOVERY_MAX_ATTEMPTS:-10}
     depends_on:
       mongodb:
         condition: service_healthy

@@ -6,12 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 // Una clase y no un record, a diferencia de los otros modelos: la cadena lo va completando paso a paso (los ítems al
 // reservar, el total después, el pago al final), y el orquestador lo guarda después de cada paso.
 @Document("orders")
+// El recuperador busca los pedidos con acciones pendientes en cada pasada (3.6.2).
+@CompoundIndex(name = "pending_action_type", def = "{'pendingActions.type': 1}")
 public class Order {
 
 	public static final String IDEMPOTENCY_KEY_INDEX = "idempotency_key_unique";
@@ -27,6 +30,7 @@ public class Order {
 	// Hasta cuándo la solicitud que creó el pedido puede seguir trabajando. Mientras está vigente, una repetición
 	// recibe 409; cuando vence con el pedido en PROCESSING, el pedido quedó abandonado y lo toma el recuperador
 	// (D-10). Se borra cuando la solicitud termina.
+	@Indexed(name = "lease_until")
 	private Instant leaseUntil;
 	private String userId;
 	private OrderStatus status;
