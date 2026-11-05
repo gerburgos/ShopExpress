@@ -66,6 +66,9 @@ services:
       SPRING_MONGODB_URI: mongodb://mongodb:27017/orders?replicaSet=rs0
       SERVICES_USERS_URL: http://users-service:8081
       SERVICES_CATALOG_URL: http://catalog-service:8082
+      # Para alargar una compra y poder detener un servicio a mitad: SAGA_STEP_DELAY_MS=3000 docker compose up -d
+      # orders-service.
+      SAGA_STEP_DELAY_MS: ${SAGA_STEP_DELAY_MS:-0}
     depends_on:
       mongodb:
         condition: service_healthy

@@ -23,10 +23,13 @@ public class OrderOrchestrator {
 
 	private final OrderHandler chain;
 	private final MongoTemplate mongoTemplate;
+	private final SagaSettings settings;
 
-	public OrderOrchestrator(@Qualifier("orderChain") OrderHandler chain, MongoTemplate mongoTemplate) {
+	public OrderOrchestrator(@Qualifier("orderChain") OrderHandler chain, MongoTemplate mongoTemplate,
+			SagaSettings settings) {
 		this.chain = chain;
 		this.mongoTemplate = mongoTemplate;
+		this.settings = settings;
 	}
 
 	public Order placeOrder(String idempotencyKey, String simulatedPayment, CreateOrderRequest request) {
@@ -37,11 +40,12 @@ public class OrderOrchestrator {
 		catch (StepFailedException e) {
 			cancel(context, e);
 		}
+		finish(context);
 		return context.getOrder();
 	}
 
-	// Se guarda el pedido entero y no un $set de campos: solo esta solicitud lo modifica mientras corre la cadena, así
-	// que no hay otra escritura que pisar.
+	// Se guarda el pedido entero y no un $set de campos: mientras el lease está vigente, solo esta solicitud lo
+	// modifica (el recuperador toma únicamente pedidos con el lease vencido), así que no hay otra escritura que pisar.
 	private void saveProgress(OrderContext context, OrderHandler step) {
 		Order order = context.getOrder();
 		// Antes de registrar el pedido no hay nada que guardar. Si la clave ya tenía un pedido, ese pedido es de otra
@@ -49,9 +53,39 @@ public class OrderOrchestrator {
 		if (order == null || context.isExistingOrder()) {
 			return;
 		}
+		Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 		order.setCompletedSteps(context.getCompletedSteps().stream().map(OrderHandler::name).toList());
+		order.setUpdatedAt(now);
+		// Se renueva en cada paso: alcanza con que cubra el paso siguiente en el peor caso (3.3.6).
+		order.setLeaseUntil(settings.leaseFrom(now));
+		mongoTemplate.save(order);
+		delayForTests();
+	}
+
+	// La solicitud terminó, bien o mal: se borra el lease. Una repetición ya no recibe 409 sino la respuesta final, y el
+	// recuperador no confunde el pedido con uno abandonado.
+	private void finish(OrderContext context) {
+		Order order = context.getOrder();
+		if (order == null || context.isExistingOrder()) {
+			return;
+		}
+		order.setLeaseUntil(null);
 		order.setUpdatedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
 		mongoTemplate.save(order);
+	}
+
+	// saga.step-delay-ms vale 0 salvo en las pruebas: alarga la compra para poder detener un servicio a mitad, o para
+	// ver que el recuperador no toma una compra lenta (CA-09, CA-12, CA-20, CA-22).
+	private void delayForTests() {
+		if (settings.getStepDelayMs() <= 0) {
+			return;
+		}
+		try {
+			Thread.sleep(settings.getStepDelayMs());
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	private void cancel(OrderContext context, StepFailedException failure) {
@@ -76,8 +110,7 @@ public class OrderOrchestrator {
 				log.warn("Pedido {}: no se pudo compensar {}. Causa: {}", order.getId(), step.name(), e.getMessage());
 			}
 		}
-		order.setUpdatedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
-		mongoTemplate.save(order);
+		// El pedido cancelado lo guarda finish(), junto con el lease borrado.
 	}
 
 }

@@ -2440,6 +2440,47 @@
             "url": "{{ordersUrl}}/api/orders/ord_no-existe",
             "description": ""
           }
+        },
+        {
+          "name": "16. Reusar la clave de la compra aprobada con otra compra",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 422 con el código IDEMPOTENCY_KEY_REUSED\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"IDEMPOTENCY_KEY_REUSED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "compra-{{pedidoRunId}}"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "D-06. La misma clave con otro cuerpo es otra compra: devolver el pedido existente sería responder por algo que el cliente no pidió.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{pedidoUserId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoMateId}}\",\n      \"quantity\": 2\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ]
     }

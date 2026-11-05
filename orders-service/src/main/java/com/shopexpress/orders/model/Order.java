@@ -22,6 +22,12 @@ public class Order {
 	// simultáneas. Buscar primero y después insertar tendría una carrera (D-06).
 	@Indexed(name = IDEMPOTENCY_KEY_INDEX, unique = true)
 	private String idempotencyKey;
+	// Huella del cuerpo: la misma clave con otra compra se rechaza en lugar de devolver un pedido que no corresponde.
+	private String requestHash;
+	// Hasta cuándo la solicitud que creó el pedido puede seguir trabajando. Mientras está vigente, una repetición
+	// recibe 409; cuando vence con el pedido en PROCESSING, el pedido quedó abandonado y lo toma el recuperador
+	// (D-10). Se borra cuando la solicitud termina.
+	private Instant leaseUntil;
 	private String userId;
 	private OrderStatus status;
 	private CancellationReason reason;
@@ -49,6 +55,22 @@ public class Order {
 
 	public void setIdempotencyKey(String idempotencyKey) {
 		this.idempotencyKey = idempotencyKey;
+	}
+
+	public String getRequestHash() {
+		return requestHash;
+	}
+
+	public void setRequestHash(String requestHash) {
+		this.requestHash = requestHash;
+	}
+
+	public Instant getLeaseUntil() {
+		return leaseUntil;
+	}
+
+	public void setLeaseUntil(Instant leaseUntil) {
+		this.leaseUntil = leaseUntil;
 	}
 
 	public String getUserId() {

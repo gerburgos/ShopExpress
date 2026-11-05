@@ -32,6 +32,15 @@ services:
   catalog:
     url: http://localhost:8082
 
+saga:
+  retry:
+    # Intentos por llamada dentro de la solicitud, y la espera antes del segundo, que se duplica en cada siguiente
+    # (3.3.6, 3.8).
+    max-attempts: 3
+    initial-backoff-ms: 200
+  # Demora entre pasos, solo para pruebas (CA-09, CA-12, CA-20, CA-22). En Compose se cambia con SAGA_STEP_DELAY_MS.
+  step-delay-ms: 0
+
 http:
   client:
     # Timeouts de las llamadas a los otros servicios (3.8). Sin ellos, un servicio colgado dejaría la compra esperando.
