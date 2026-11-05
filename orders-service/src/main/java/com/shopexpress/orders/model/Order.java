@@ -38,6 +38,11 @@ public class Order {
 	// Los pasos de la cadena que ya terminaron, en orden. Si el servicio se cae a mitad, dice qué hay que compensar
 	// (D-10).
 	private List<String> completedSteps = new ArrayList<>();
+	// Lo que falta hacer en segundo plano. Va aparte del estado: el estado dice cómo terminó la compra para el cliente,
+	// y esto es trabajo interno para quien opera el sistema (D-16).
+	private List<PendingAction> pendingActions = new ArrayList<>();
+	// Una acción agotó los intentos del recuperador: hace falta que alguien lo mire (F-11).
+	private boolean requiresAttention;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -135,6 +140,29 @@ public class Order {
 
 	public void setCompletedSteps(List<String> completedSteps) {
 		this.completedSteps = completedSteps;
+	}
+
+	public List<PendingAction> getPendingActions() {
+		return pendingActions;
+	}
+
+	public void setPendingActions(List<PendingAction> pendingActions) {
+		this.pendingActions = pendingActions;
+	}
+
+	// Agrega la acción si no estaba: un mismo pedido no necesita dos veces la misma.
+	public void addPendingAction(PendingAction.Type type, String error) {
+		if (pendingActions.stream().noneMatch(action -> action.type() == type)) {
+			pendingActions.add(new PendingAction(type, 0, error, null));
+		}
+	}
+
+	public boolean isRequiresAttention() {
+		return requiresAttention;
+	}
+
+	public void setRequiresAttention(boolean requiresAttention) {
+		this.requiresAttention = requiresAttention;
 	}
 
 	public Instant getCreatedAt() {

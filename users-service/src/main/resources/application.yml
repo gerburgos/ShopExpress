@@ -11,6 +11,9 @@ spring:
       # Crea al arrancar los índices únicos declarados en User, que viene apagado por defecto. Así los índices
       # quedan escritos junto al modelo, y un despliegue desde cero los tiene sin pasos manuales.
       auto-index-creation: true
+      representation:
+        # El total de cada compra del historial como Decimal128, igual que los importes en Catálogo y Pedidos (R-06).
+        big-decimal: decimal128
     redis:
       host: localhost
       port: 6379

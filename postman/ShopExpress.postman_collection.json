@@ -2481,6 +2481,56 @@
               }
             }
           }
+        },
+        {
+          "name": "17. Consultar el historial de compras del comprador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const purchases = pm.response.json();",
+                  "pm.test(\"Responde 200 con una sola compra, la aprobada\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(purchases).to.have.length(1);",
+                  "    pm.expect(purchases[0].orderId).to.eql(pm.collectionVariables.get(\"pedidoId\"));",
+                  "    pm.expect(purchases[0].items[0].name).to.eql(\"Mate\");",
+                  "    pm.expect(pm.response.text()).to.include('\"total\":25.50');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersUrl}}/api/users/{{pedidoUserId}}/purchases",
+            "description": "RF-07. El paso 9 registró la compra aprobada en Usuarios. Las canceladas no están: solo se registran las confirmadas."
+          }
+        },
+        {
+          "name": "18. Consultar el historial de un usuario inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 con el código USER_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"USER_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersUrl}}/api/users/usr_no-existe/purchases",
+            "description": ""
+          }
         }
       ]
     }

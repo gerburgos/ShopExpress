@@ -8,6 +8,7 @@ import com.shopexpress.orders.saga.handler.OrderConfirmer;
 import com.shopexpress.orders.saga.handler.OrderCreator;
 import com.shopexpress.orders.saga.handler.PaymentCapturer;
 import com.shopexpress.orders.saga.handler.PaymentProcessor;
+import com.shopexpress.orders.saga.handler.PurchaseHistoryRecorder;
 import com.shopexpress.orders.saga.handler.StockReserver;
 import com.shopexpress.orders.saga.handler.TotalCalculator;
 import com.shopexpress.orders.saga.handler.UserValidator;
@@ -20,8 +21,8 @@ public class OrderChainConfig {
 	@Bean
 	OrderHandler orderChain(DataValidator dataValidator, UserValidator userValidator, OrderCreator orderCreator,
 			StockReserver stockReserver, TotalCalculator totalCalculator, PaymentProcessor paymentProcessor,
-			OrderConfirmer orderConfirmer, PaymentCapturer paymentCapturer) {
-		// El paso 9, PurchaseHistoryRecorder, llega en INC-5 junto con el historial de compras de Usuarios (INT-04).
+			OrderConfirmer orderConfirmer, PaymentCapturer paymentCapturer,
+			PurchaseHistoryRecorder purchaseHistoryRecorder) {
 		dataValidator
 				.setNext(userValidator)
 				.setNext(orderCreator)
@@ -29,7 +30,8 @@ public class OrderChainConfig {
 				.setNext(totalCalculator)
 				.setNext(paymentProcessor)
 				.setNext(orderConfirmer)
-				.setNext(paymentCapturer);
+				.setNext(paymentCapturer)
+				.setNext(purchaseHistoryRecorder);
 		return dataValidator;
 	}
 
