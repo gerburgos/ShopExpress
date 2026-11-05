@@ -3,9 +3,9 @@
 | | |
 | --- | --- |
 | Proyecto | Tarea 2, NoSQL 2026: sistema de microservicios para comercio electrónico |
-| Fecha | 3 de noviembre de 2026 |
-| Versión | 1.6 |
-| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. INC-1 está implementado: el alta, la consulta y la modificación de usuarios y productos pasan la colección Postman. INC-2 está implementado: la caché con Redis, su invalidación y la lectura desde MongoDB cuando Redis cae se verificaron, y la latencia se midió con y sin caché. Los demás requisitos todavía no están implementados. |
+| Fecha | 4 de noviembre de 2026 |
+| Versión | 1.7 |
+| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. INC-1 está implementado: el alta, la consulta y la modificación de usuarios y productos pasan la colección Postman. INC-2 está implementado: la caché con Redis, su invalidación y la lectura desde MongoDB cuando Redis cae se verificaron, y la latencia se midió con y sin caché. INC-3 está implementado: la reserva, confirmación y liberación de stock, la reposición y el script de concurrencia (CA-17). INC-4 e INC-5 están implementados: la compra recorre la cadena orquestada como SAGA, con idempotencia, reintentos, historial de compras y recuperador. Se verificaron CA-05, CA-09, CA-12, CA-15, CA-17, CA-20, CA-21 y CA-22 con scripts y caídas provocadas, y el resto con la colección Postman. Falta RF-08, que es opcional. |
 | Ubicación | `docs/` del repositorio. Es la única versión vigente de este documento. |
 
 ## 1. Introducción
@@ -230,10 +230,10 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 
 | ID | Servicio | Ruta | Uso | Comportamiento ante repeticiones |
 | --- | --- | --- | --- | --- |
-| INT-01 | Catálogo | `POST /internal/reservations` | Reserva `{orderId, items}` en una sola transacción y devuelve los nombres y precios vigentes. | Repetir devuelve la misma reserva. Si la reserva ya estaba `RELEASED`, responde 409. |
-| INT-02 | Catálogo | `POST /internal/reservations/{orderId}/release` | Libera la reserva (compensación). | Solo el paso de `RESERVED` a `RELEASED` repone stock. Si la reserva no existe, crea una lápida. |
-| INT-03 | Catálogo | `POST /internal/reservations/{orderId}/confirm` | Confirma la reserva. Es el pivote de la compra. | Pasa de `RESERVED` a `CONFIRMED`; repetirla no tiene efecto. Si la reserva está `RELEASED`, responde 409. |
-| INT-04 | Usuarios | `POST /internal/users/{userId}/purchases` | Registra la compra en el historial. | La entrada usa `orderId` como `_id`. |
+| INT-01 | Catálogo | `POST /internal/reservations` | Reserva `{orderId, items}` en una sola transacción y devuelve los nombres y precios vigentes. Responde 200, también la primera vez. | Repetir devuelve la misma reserva. Si la reserva ya estaba `RELEASED`, o es una lápida, responde 409 `RESERVATION_RELEASED`. Sin stock, 409 `OUT_OF_STOCK`; producto inexistente, 404 `PRODUCT_NOT_FOUND`. Si la transacción choca con otras en sus 3 intentos, 503 `RESERVATION_CONFLICT`: no es definitivo, y Pedidos lo reintenta. |
+| INT-02 | Catálogo | `POST /internal/reservations/{orderId}/release` | Libera la reserva (compensación). | Solo el paso de `RESERVED` a `RELEASED` repone stock; repetirla no lo repone otra vez. Si la reserva no existe, crea una lápida. Si ya está `CONFIRMED`, responde 409 `RESERVATION_CONFIRMED`: después del pivote no se devuelve stock vendido. |
+| INT-03 | Catálogo | `POST /internal/reservations/{orderId}/confirm` | Confirma la reserva. Es el pivote de la compra. | Pasa de `RESERVED` a `CONFIRMED`; repetirla no tiene efecto. Si la reserva está `RELEASED`, responde 409 `RESERVATION_RELEASED`. Si no existe, 404 `RESERVATION_NOT_FOUND`: en el flujo normal no pasa, y el código distinto lo separa en el log de una reserva perdida. |
+| INT-04 | Usuarios | `POST /internal/users/{userId}/purchases` | Registra la compra en el historial. | La entrada usa `orderId` como `_id`: repetir devuelve la misma compra, con 200. Si el usuario no existe, 404 `USER_NOT_FOUND`. |
 
 `SimulatedPaymentGateway` vive dentro de Pedidos y Pagos y ofrece `authorize`, `capture` y `reverse`, también idempotentes por `orderId`. Para validar el usuario, Pedidos llama a RF-02 y solo mira el código de estado (200 o 404).
 
@@ -300,13 +300,13 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 **RF-10. Reponer stock.** `POST /api/products/{productId}/restock`. P2. CA-17.
 - **Entrada:** `quantity`, un entero mayor que 0.
 - Suma al stock actual con un incremento atómico (RN-12) e invalida la caché.
-- **Respuestas:** 200 con el producto y su nuevo stock; 400; 404.
+- **Respuestas:** 200 con el producto y su nuevo stock; 400; 404 (`PRODUCT_NOT_FOUND`).
 
 #### Servicio de Pedidos y Pagos
 
 **RF-05. Crear pedido.** `POST /api/orders`. Exigido, P1. CA-03 a CA-08, CA-10, CA-13, CA-15 y CA-20.
 
-Recorre la cadena de manejadores orquestada como SAGA (sección 3.3). El cliente no envía precios ni total (RN-05).
+Recorre la cadena de manejadores orquestada como SAGA (sección 3.3). El cliente no envía precios ni total (RN-05). `payment.method` es `CREDIT_CARD` o `DEBIT_CARD`; la pasarela simulada no distingue entre medios. Un valor de `X-Simulated-Payment` fuera de la lista da 400.
 
 ```http
 POST /api/orders
@@ -349,7 +349,8 @@ La respuesta es síncrona y trae el estado final del pedido, con el historial de
 | --- | --- | --- | --- |
 | Confirmado | 201 | `CONFIRMED` | `CAPTURED` (o `AUTHORIZED` mientras la captura se reintenta) |
 | Datos inválidos | 400 | No se crea | — |
-| Usuario inexistente | 422 | No se crea | — |
+| Usuario inexistente | 422 `USER_NOT_FOUND` | No se crea | — |
+| Usuarios no responde | 503 `USERS_UNAVAILABLE` | No se crea | — |
 | Producto inexistente | 422 | `CANCELLED`, `PRODUCT_NOT_FOUND` | Sin autorización |
 | Sin stock | 409 | `CANCELLED`, `OUT_OF_STOCK` | Sin autorización |
 | Catálogo no responde al reservar | 503 | `CANCELLED`, `CATALOG_UNAVAILABLE` | Sin autorización |
@@ -358,12 +359,12 @@ La respuesta es síncrona y trae el estado final del pedido, con el historial de
 | Reserva perdida antes de confirmarse | 409 | `CANCELLED`, `RESERVATION_LOST` | `REVERSED` (o `REVERSAL_PENDING`) |
 | Catálogo no responde al confirmar la reserva | 202 | `PROCESSING`; se consulta con RF-06 | `AUTHORIZED` |
 | Repetición de una solicitud ya terminada | El mismo código y cuerpo que la original | Sin cambios | Sin cambios |
-| Misma clave, con la solicitud original todavía en curso | 409 | Sin cambios | Sin cambios |
-| Misma clave con otro cuerpo | 422 | Sin cambios | Sin cambios |
+| Misma clave, con la solicitud original todavía en curso | 409 `ORDER_IN_PROGRESS` | Sin cambios | Sin cambios |
+| Misma clave con otro cuerpo | 422 `IDEMPOTENCY_KEY_REUSED` | Sin cambios | Sin cambios |
 
 **RF-06. Consultar pedido.** `GET /api/orders/{orderId}`. P2. CA-08, CA-16, CA-20.
 - Devuelve el pedido con la misma forma que RF-05, incluido el historial completo del pago.
-- **Respuestas:** 200; 404.
+- **Respuestas:** 200; 404 (`ORDER_NOT_FOUND`).
 
 ### 3.3. Proceso de compra: SAGA y Chain of Responsibility
 
@@ -376,7 +377,8 @@ Los manejadores de la cadena son los pasos de la SAGA (D-12):
 
 Las piezas:
 
-- **Cada manejador** implementa `OrderHandler.handle(OrderContext)`: hace su parte y decide si la solicitud sigue al siguiente manejador o se corta. Los manejadores con efectos también implementan `compensate(OrderContext)`.
+- **Cada manejador** extiende `OrderHandler` y conoce al siguiente, que se fija una sola vez con `setNext` (D-20). `handle(OrderContext)` es `final`: ejecuta lo propio del paso (`process`), avisa al orquestador para que guarde el avance y, si la cadena no se cortó, llama al siguiente. Así ningún manejador puede saltearse el guardado. Los manejadores con efectos también implementan `compensate(OrderContext)`.
+- **Si un paso falla**, lanza `StepFailedException` con el motivo, y la excepción vuelve por la cadena hasta el orquestador.
 - **`OrderOrchestrator`** hace correr la cadena y guarda el avance después de cada paso. No implementa ningún paso.
   - **Si un paso falla antes del pivote:** el pedido pasa a `CANCELLED` y los pasos completados se compensan en orden inverso.
   - **A partir del pivote:** no se compensa nada. Los pasos que falten se completan, reintentándolos.
@@ -396,7 +398,7 @@ La consigna nombra tres manejadores en español. La columna "Clase" indica su eq
 | --- | --- | --- | --- | --- |
 | 1 | `DataValidator` (ValidadorDeDatos en la consigna) | Comprueba que haya clave, que haya al menos un ítem, que las cantidades sean enteras y positivas y que no se repitan productos. No tiene efectos. | — | Validación |
 | 2 | `UserValidator` | Comprueba que el usuario exista (RF-02). No tiene efectos. | — | Validación |
-| 3 | `OrderRegistrar` | Crea el pedido en `PROCESSING`. Si la clave ya existe, corta la cadena y devuelve el pedido existente. | El pedido pasa a `CANCELLED`. | Compensable |
+| 3 | `OrderCreator` | Crea el pedido en `PROCESSING`. Si la clave ya existe, corta la cadena y devuelve el pedido existente. | El pedido pasa a `CANCELLED`. | Compensable |
 | 4 | `StockReserver` (ValidadorDeStock en la consigna) | Reserva todos los ítems (INT-01) y recibe los precios vigentes. Valida reservando, porque una lectura podría venir de la caché (RN-08). | Se libera la reserva (INT-02). | Compensable |
 | 5 | `TotalCalculator` | Calcula el total con los precios de la reserva. | — | — |
 | 6 | `PaymentProcessor` (ProcesadorDePago en la consigna) | Pide la autorización a la pasarela. | Se reversa la autorización. | Compensable |
@@ -408,7 +410,7 @@ La consigna nombra tres manejadores en español. La columna "Clase" indica su eq
 flowchart TB
     entrada(["POST /api/orders"]) --> h1["1. DataValidator (ValidadorDeDatos)"]
     h1 -->|"ok"| h2["2. UserValidator"]
-    h2 -->|"ok"| h3["3. OrderRegistrar"]
+    h2 -->|"ok"| h3["3. OrderCreator"]
     h3 -->|"pedido nuevo"| h4["4. StockReserver (ValidadorDeStock)"]
     h4 -->|"reservado"| h5["5. TotalCalculator"]
     h5 --> h6["6. PaymentProcessor (ProcesadorDePago): autoriza"]
@@ -445,7 +447,7 @@ El estado del pedido dice solo cómo terminó la compra. El trabajo interno que 
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PROCESSING: OrderRegistrar
+    [*] --> PROCESSING: OrderCreator
     PROCESSING --> CONFIRMED: reserva confirmada, pivote
     PROCESSING --> CANCELLED: falla antes del pivote
     CONFIRMED --> [*]
@@ -542,7 +544,8 @@ Cuando una acción agota `saga.recovery.max-attempts`, el pedido queda con `requ
   ```
 
   Con los valores de 3.8, el peor caso es de 12,6 s.
-- **Qué toma el recuperador:** solo los pedidos con el lease vencido. Para que dos ejecuciones no tomen el mismo, lo hace con un update condicional sobre `version`.
+- **Qué toma el recuperador:** solo los pedidos con el lease vencido. Para que dos ejecuciones no tomen el mismo, lo toma con un update condicional sobre el propio lease: solo si sigue vencido, y poniéndole uno nuevo mientras lo procesa (D-23).
+- **Cómo sabe si el pivote ocurrió:** un pedido abandonado en `PROCESSING` pudo haber confirmado la reserva justo antes de la caída. El recuperador intenta liberarla (INT-02): si Catálogo la libera, el pivote no ocurrió y el pedido se cancela con `INTERRUPTED`; si responde `RESERVATION_CONFIRMED`, ya ocurrió y se completan la captura y el historial (F-12).
 - **Por qué no un umbral fijo:** con los reintentos, una compra legítima puede tardar más que cualquier umbral, y el recuperador la compensaría mientras todavía avanza.
 
 ### 3.4. Reglas de negocio
@@ -651,7 +654,7 @@ Una instancia de MongoDB configurada como replica set de un nodo (`rs0`), con un
 **`orders.orders`**
 
 - **Índices:** único sobre `idempotencyKey`; uno sobre `leaseUntil` y otro sobre `pendingActions.type`, para el recuperador.
-- **Campos que la API no expone:** `idempotencyKey`, `requestHash`, `completedSteps`, `pendingActions`, `requiresAttention`, `leaseUntil` y `version`.
+- **Campos que la API no expone:** `idempotencyKey`, `requestHash`, `completedSteps`, `pendingActions`, `requiresAttention` y `leaseUntil`.
 
 El ejemplo muestra un pedido cancelado por pago rechazado, que todavía tiene pendiente liberar la reserva:
 
@@ -674,13 +677,12 @@ El ejemplo muestra un pedido cancelado por pago rechazado, que todavía tiene pe
       { "operation": "AUTHORIZE", "result": "DECLINED", "attempt": 1, "at": "2026-11-02T14:03:10Z" }
     ]
   },
-  "completedSteps": ["REGISTER", "RESERVE"],
+  "completedSteps": ["DataValidator", "UserValidator", "OrderCreator", "StockReserver", "TotalCalculator"],
   "pendingActions": [
     { "type": "RELEASE_RESERVATION", "attempts": 4, "lastError": "Sin respuesta de catalog-service en 3 s", "lastAttemptAt": "2026-11-02T14:04:10Z" }
   ],
   "requiresAttention": false,
-  "leaseUntil": "2026-11-02T14:04:23Z",
-  "version": 9,
+  "leaseUntil": null,
   "createdAt": "2026-11-02T14:03:10Z",
   "updatedAt": "2026-11-02T14:04:10Z"
 }
@@ -766,6 +768,10 @@ Cada decisión es la base de la sección "Justificación del diseño" del README
 | D-17 | Reintentos acotados y configurables en dos niveles: dentro de la solicitud, con espera exponencial, y en el recuperador. Solo se reintentan las fallas transitorias, siempre con la misma clave. | Los cortes breves se resuelven sin que el cliente lo note, y las caídas largas no bloquean la respuesta. Usar la misma clave hace que reintentar no duplique efectos. | **Reintentar sin límite.** Un servicio caído durante horas dejaría pedidos reintentándose para siempre, sin que nadie se entere. | — |
 | D-18 | Cada servicio se llama `<dominio>-service`: `users-service`, `catalog-service` y `orders-service`. El mismo nombre se usa en el directorio, el servicio de Compose, `spring.application.name` y el `artifactId`. Las bases conservan el nombre del dominio: `users`, `catalog` y `orders`. | Es la convención del ejemplo de microservicios de la comunidad Spring. El sufijo distingue al servicio de su base. Un nombre único evita traducir entre capas, y en Compose ese nombre también es el hostname con el que los servicios se llaman entre sí. | **`<entidad>-manager`.** No lo usa ninguno de los ejemplos consultados, y `product-manager` nombra el catálogo pero no el inventario, que es otra capacidad de negocio. **Nombre corto en el servicio y sufijo `db` en la base, como eShop.** Obliga a renombrar las bases del modelo de datos. | R-20 a R-23 |
 | D-19 | Cada producto tiene un `id` que genera el servidor (`prod_` y un UUID) y un `sku` que carga el administrador: único, en mayúsculas y fijo. Las rutas, las reservas y los pedidos usan el `id`. | La consigna no fija el formato del identificador. El `id` no cambia nunca y nadie tiene que inventarlo, y el `sku` da un código legible para las personas. Como el `sku` es fijo, las reservas y los pedidos no lo copian: con el `productId` siempre se llega al mismo. | **El SKU como `_id`.** En MongoDB el `_id` no se puede modificar, y las reservas y los pedidos lo copian: un SKU mal cargado obligaría a crear otro producto. **SKU modificable.** Habría que copiarlo en cada reserva y pedido, para que un pedido viejo no muestre el SKU nuevo. | — |
+| D-20 | La cadena de manejadores es la clásica del patrón: cada manejador conoce al siguiente y le pasa la solicitud. Una clase base con `handle` `final` avisa al orquestador después de cada paso. | Es el patrón como lo describe la literatura, el que se reconoce en la defensa. El aviso desde la clase base mantiene el avance y la compensación en el orquestador, como pide 3.3.1. | **Una lista de pasos que recorre el orquestador.** Es más fácil de leer, pero se parece más a una lista de comandos que a una cadena. | — |
+| D-21 | Pedidos llama a Usuarios y a Catálogo con `RestClient`, con una URL base y timeouts por servicio. Cada respuesta se traduce a una de tres salidas: el cuerpo, un rechazo definitivo (4xx) o una falla transitoria (5xx, timeout o conexión rechazada). | Viene con Spring y no suma dependencias. Cada llamada queda a la vista, y se puede mostrar qué pasa ante cada código. La traducción en tres salidas es la que usan el reintento y la SAGA para decidir. | **Interfaz con `@HttpExchange`.** Menos código, pero el manejo de errores queda en otro lugar. **OpenFeign.** Suma Spring Cloud y no agrega nada que Spring no traiga. | — |
+| D-22 | Los reintentos se escriben como un bucle explícito: en Catálogo, `TransactionTemplate` dentro de un bucle de hasta 3 intentos; en Pedidos, `Retrier`, con espera que se duplica. | El orden queda a la vista: el reintento afuera y la transacción adentro, porque una transacción abortada no se puede seguir usando. | **`@Retryable` sobre `@Transactional`.** El orden lo deciden los proxies, y si la transacción queda afuera se reintenta dentro de una ya abortada. **`withTransaction` del driver.** Reintenta por tiempo y no por cantidad, y choca con los intentos configurables. **`RetryTemplate`.** Funciona, pero hay que explicar su configuración en lugar del bucle. | R-03, R-05 |
+| D-23 | El recuperador toma un pedido con un update condicional sobre el lease vencido, y averigua si el pivote ocurrió intentando liberar la reserva. | El lease ya marca quién trabaja sobre el pedido: condicionar sobre él es atómico y no suma un campo. Liberar es seguro en los dos casos (RN-09) y responde exactamente la pregunta, sin un endpoint nuevo en Catálogo. | **Control de versiones (`@Version`) en todo el pedido.** Afecta cada guardado del orquestador para resolver algo que el lease ya resuelve. **Un endpoint para consultar la reserva.** Es otra ruta que mantener, y la respuesta puede cambiar entre la consulta y la decisión. | — |
 
 ## 5. Limitaciones conocidas
 
@@ -781,6 +787,9 @@ Cada decisión es la base de la sección "Justificación del diseño" del README
 | Si falla una invalidación, puede verse el dato anterior hasta que venza el TTL: 60 s para usuarios y 10 s para productos. | Una consulta puede mostrar un precio o una dirección desactualizados. | El fallo queda en el log. Si la causa es que Redis se cayó, al volver arranca vacío, porque no tiene persistencia. |
 | Las reservas no vencen. | Si Pedidos desaparece para siempre, el stock queda reservado. | El recuperador lo resuelve mientras Pedidos funcione. Un vencimiento automático agregaría una carrera con la autorización. |
 | La reposición (RF-10) no es idempotente. | Si se reintenta, suma dos veces. | Es una operación administrativa de demo. En uso real llevaría `Idempotency-Key`. |
+| Con muchas operaciones simultáneas sobre un mismo producto, algunas agotan los 3 intentos de la transacción en Catálogo y responden 503 `RESERVATION_CONFLICT`. | Esa operación no se aplica y hay que repetirla. | Se midió: 100 confirmaciones y 100 liberaciones a la vez sobre un producto dieron 7 respuestas 503, con el stock correcto. Pedidos repite los 503 con espera creciente (D-17), así que no se agregó otra espera en Catálogo. |
+| Un pedido abandonado mientras Catálogo no responde se reintenta en cada pasada del recuperador, sin límite. | No llega a `requiresAttention`, que solo cuenta los intentos de las acciones pendientes. | Se resuelve solo cuando Catálogo vuelve, y el log lo muestra en cada pasada. |
+| La pasarela simulada responde al instante, también con `NO_RESPONSE`. | Los timeouts de la pasarela no se ejercitan con una espera real. | Sí se ejercitan el reintento y el reverso: el historial del pago muestra tres `AUTHORIZE TIMEOUT` y un `REVERSE OK`. |
 | El pago es simulado y no hay autenticación. | — | Ambos están fuera del alcance de la consigna. |
 
 ## Anexo A. Convenciones de desarrollo
@@ -843,10 +852,10 @@ La pre-entrega del jueves 5/11 muestra un avance parcial: la compra funcionando.
 | INC-0 | Mié 28/10 (terminado) | Crear el repositorio y los tres proyectos Spring Boot, y el `docker-compose.yml` con MongoDB (`rs0` inicializado) y Redis. | CA-19, ENT-01 |
 | INC-1 | Jue 29 a vie 30/10 | RF-01 a RF-04, RF-09 y RF-11, con validaciones, índices y DTO. Verificar el tipo de los importes en MongoDB. Colección Postman inicial. | CA-01, CA-02, parte de CA-13 y de CA-18 |
 | INC-2 | Sáb 31/10 (implementado el 29/10) | Caché con Redis, `CacheErrorLogger` e invalidación. Medición con y sin caché. | CA-11, CA-14, CA-18, la parte de caché de CA-16 |
-| INC-3 | Dom 1 a lun 2/11 | INT-01 a INT-03, con transacción y reintento. RF-10. Script de concurrencia. | CA-17, base de CA-04 y CA-07 |
-| INC-4 | Mar 3 a mié 4/11 | RF-05 y RF-06: cadena, orquestador y pasarela simulada (autorizar, capturar y reversar), con el historial del pago. | CA-03, CA-04, CA-06, CA-07, CA-10, CA-16 |
+| INC-3 | Dom 1 a lun 2/11 (implementado el 3/11) | INT-01 a INT-03, con transacción y reintento. RF-10. Script de concurrencia. | CA-17, base de CA-04 y CA-07 |
+| INC-4 | Mar 3 a mié 4/11 (implementado el 3 y 4/11) | RF-05 y RF-06: cadena, orquestador y pasarela simulada (autorizar, capturar y reversar), con el historial del pago. | CA-03, CA-04, CA-06, CA-07, CA-10, CA-16 |
 | — | Jue 5/11 | Pre-entrega: se muestra la compra aprobada, el pago rechazado y la falta de stock. | — |
-| INC-5 | Vie 6 a sáb 7/11 | Idempotencia, reintentos dentro de la solicitud, INT-04, RF-07, acciones pendientes, `requiresAttention` y `SagaRecoveryJob` con lease. | CA-05, CA-08, CA-12, CA-15, CA-20, CA-21, CA-22 |
+| INC-5 | Vie 6 a sáb 7/11 (implementado el 4/11) | Idempotencia, reintentos dentro de la solicitud, INT-04, RF-07, acciones pendientes, `requiresAttention` y `SagaRecoveryJob` con lease. | CA-05, CA-08, CA-12, CA-15, CA-20, CA-21, CA-22 |
 | INC-6 | Dom 8 a lun 9/11 | Mejoras opcionales: RF-08 y una vista del pedido y del historial del pago con el Visualizer de Postman. | RF-08 |
 | INC-7 | Mar 10/11 | README, diagramas, colección final con Newman y ensayo cronometrado de la demo. | ENT-02 a ENT-05, ENT-07, ENT-08 |
 | — | Mié 11/11 | Margen por si algo se atrasa. | — |

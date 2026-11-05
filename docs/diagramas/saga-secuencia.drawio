@@ -146,7 +146,7 @@
             <mxPoint x="426" y="274" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="e40" value="3. OrderRegistrar: pedido PROCESSING" style="html=1;align=left;spacingLeft=6;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+        <mxCell id="e40" value="3. OrderCreator: pedido PROCESSING" style="html=1;align=left;spacingLeft=6;endArrow=block;endFill=1;rounded=0;fontSize=11;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="426" y="292" as="sourcePoint" />
             <mxPoint x="426" y="314" as="targetPoint" />
