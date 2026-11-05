@@ -1854,6 +1854,594 @@
           }
         }
       ]
+    },
+    {
+      "name": "Pedidos",
+      "description": "RF-05 y RF-06: la compra recorre la cadena de manejadores orquestada como SAGA. Se corre en orden.",
+      "item": [
+        {
+          "name": "1. Crear el usuario comprador",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Valores nuevos en cada corrida: el email, el documento, el SKU y las claves de idempotencia son únicos.",
+                  "const runId = Date.now().toString(36);",
+                  "pm.collectionVariables.set(\"pedidoRunId\", runId);",
+                  "pm.collectionVariables.set(\"pedidoDocumento\", String(Math.floor(10000000 + Math.random() * 90000000)));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"pedidoUserId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usersUrl}}/api/users",
+            "description": "Usuario nuevo en cada corrida.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"CI\",\n  \"documentNumber\": \"{{pedidoDocumento}}\",\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Compradora\",\n  \"email\": \"ana.{{pedidoRunId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "2. Crear el Mate, con 1 unidad",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"pedidoMateId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "Una sola unidad, para que un pedido de 2 no alcance.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"PED-MATE-{{pedidoRunId}}\",\n  \"name\": \"Mate\",\n  \"price\": 25.5,\n  \"stock\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "3. Crear el Termo, con 2 unidades",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"pedidoTermoId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{catalogUrl}}/api/products",
+            "description": "Para los pagos que fallan: el stock tiene que volver.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"PED-TERMO-{{pedidoRunId}}\",\n  \"name\": \"Termo\",\n  \"price\": 40,\n  \"stock\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "4. Comprar 2 Mates: sin stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 con el pedido CANCELLED por OUT_OF_STOCK\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"CANCELLED\");",
+                  "    pm.expect(pm.response.json().reason).to.eql(\"OUT_OF_STOCK\");",
+                  "});",
+                  "pm.test(\"No llegó al pago\", () => pm.expect(pm.response.json().payment.history).to.eql([]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "sin-stock-{{pedidoRunId}}"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "CA-07. La cadena falla en el paso 4 (StockReserver): Catálogo no tiene stock, el orquestador cancela el pedido y no se toca el pago.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{pedidoUserId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoMateId}}\",\n      \"quantity\": 2\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "5. Comprar 1 Mate: compra aprobada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const order = pm.response.json();",
+                  "pm.test(\"Responde 201 con el pedido CONFIRMED\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(order.id).to.match(/^ord_/);",
+                  "    pm.expect(order.status).to.eql(\"CONFIRMED\");",
+                  "});",
+                  "pm.test(\"El precio y el total salen de la reserva\", () => {",
+                  "    pm.expect(order.items[0].name).to.eql(\"Mate\");",
+                  "    pm.expect(pm.response.text()).to.include('\"unitPrice\":25.50');",
+                  "    pm.expect(pm.response.text()).to.include('\"total\":25.50');",
+                  "});",
+                  "pm.test(\"El pago quedó cobrado\", () => {",
+                  "    pm.expect(order.payment.status).to.eql(\"CAPTURED\");",
+                  "    pm.expect(order.payment.authorizationCode).to.match(/^auth_/);",
+                  "});",
+                  "pm.test(\"El historial del pago muestra cada operación con la pasarela\", () => {",
+                  "    const history = pm.response.json().payment.history.map(h => [h.operation, h.result]);",
+                  "    pm.expect(history).to.eql([[\"AUTHORIZE\", \"APPROVED\"], [\"CAPTURE\", \"OK\"]]);",
+                  "});",
+                  "pm.collectionVariables.set(\"pedidoId\", order.id);",
+                  "pm.collectionVariables.set(\"pedidoCreado\", pm.response.text());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "compra-{{pedidoRunId}}"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "CA-03. Pasa los 8 pasos: reserva, autoriza el pago, confirma la reserva (pivote) y captura el pago.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{pedidoUserId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoMateId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "6. Repetir la compra con la misma clave",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 con el mismo pedido\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get(\"pedidoCreado\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "compra-{{pedidoRunId}}"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "RN-03. Es lo que hace un cliente que no recibió la respuesta. Devuelve el mismo pedido, con el mismo código, sin reservar ni cobrar otra vez.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{pedidoUserId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoMateId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "7. Consultar el pedido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con el pedido confirmado\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"pedidoId\"));",
+                  "    pm.expect(pm.response.json().status).to.eql(\"CONFIRMED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{ordersUrl}}/api/orders/{{pedidoId}}",
+            "description": "RF-06."
+          }
+        },
+        {
+          "name": "8. Consultar el Mate: queda 0",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con el stock en 0\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().stock).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{catalogUrl}}/api/products/{{pedidoMateId}}",
+            "description": "Se vendió la única unidad, y la repetición no descontó otra. Es la primera consulta del Mate, así que se lee de MongoDB."
+          }
+        },
+        {
+          "name": "9. Comprar 1 Termo: pago rechazado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 422 con el pedido CANCELLED por PAYMENT_DECLINED\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"CANCELLED\");",
+                  "    pm.expect(pm.response.json().reason).to.eql(\"PAYMENT_DECLINED\");",
+                  "});",
+                  "pm.test(\"El pago quedó DECLINED\", () => pm.expect(pm.response.json().payment.status).to.eql(\"DECLINED\"));",
+                  "pm.test(\"El historial del pago muestra cada operación con la pasarela\", () => {",
+                  "    const history = pm.response.json().payment.history.map(h => [h.operation, h.result]);",
+                  "    pm.expect(history).to.eql([[\"AUTHORIZE\", \"DECLINED\"]]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "rechazado-{{pedidoRunId}}"
+              },
+              {
+                "key": "X-Simulated-Payment",
+                "value": "DECLINED"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "CA-06. Falla en el paso 6 (PaymentProcessor): el orquestador libera la reserva y cancela. No hay nada que reversar, porque no quedó nada retenido.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{pedidoUserId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoTermoId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "10. Comprar 1 Termo: el pago no responde",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 504 con el pedido CANCELLED por PAYMENT_TIMEOUT\", () => {",
+                  "    pm.response.to.have.status(504);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"CANCELLED\");",
+                  "    pm.expect(pm.response.json().reason).to.eql(\"PAYMENT_TIMEOUT\");",
+                  "});",
+                  "pm.test(\"El pago quedó REVERSED\", () => pm.expect(pm.response.json().payment.status).to.eql(\"REVERSED\"));",
+                  "pm.test(\"El historial del pago muestra cada operación con la pasarela\", () => {",
+                  "    const history = pm.response.json().payment.history.map(h => [h.operation, h.result]);",
+                  "    pm.expect(history).to.eql([[\"AUTHORIZE\", \"TIMEOUT\"], [\"REVERSE\", \"OK\"]]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "sin-respuesta-{{pedidoRunId}}"
+              },
+              {
+                "key": "X-Simulated-Payment",
+                "value": "NO_RESPONSE"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "CA-08. La pasarela autorizó pero la respuesta no llegó: el monto pudo quedar retenido. Se reversa la autorización, se libera la reserva y se cancela.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{pedidoUserId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoTermoId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "11. Consultar el Termo: sigue en 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 con el stock en 2\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().stock).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{catalogUrl}}/api/products/{{pedidoTermoId}}",
+            "description": "Las dos compras reservaron una unidad y las dos se compensaron: el stock volvió. Es la primera consulta del Termo, así que se lee de MongoDB."
+          }
+        },
+        {
+          "name": "12. Comprar con un usuario inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 422 con el código USER_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"USER_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "usuario-inexistente-{{pedidoRunId}}"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "F-02. Falla en el paso 2: no se crea el pedido.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"usr_no-existe\",\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoMateId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13. Comprar un producto inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 422 con el pedido CANCELLED por PRODUCT_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"CANCELLED\");",
+                  "    pm.expect(pm.response.json().reason).to.eql(\"PRODUCT_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "producto-inexistente-{{pedidoRunId}}"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "F-04. Falla en el paso 4: el pedido queda CANCELLED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{pedidoUserId}}\",\n  \"items\": [\n    {\n      \"productId\": \"prod_no-existe\",\n      \"quantity\": 1\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "14. Comprar sin clave y con datos inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});",
+                  "pm.test(\"El mensaje nombra cada problema\", () => {",
+                  "    const message = pm.response.json().message;",
+                  "    [\"Idempotency-Key\", \"X-Simulated-Payment\", \"userId\", \"items[0].quantity\", \"payment.method\"].forEach(field => pm.expect(message).to.include(field));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Simulated-Payment",
+                "value": "TAL_VEZ"
+              }
+            ],
+            "url": "{{ordersUrl}}/api/orders",
+            "description": "F-01. Falla en el paso 1 (DataValidator): el mensaje nombra cada problema y no se crea el pedido.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoMateId}}\",\n      \"quantity\": 0\n    }\n  ],\n  \"payment\": {\n    \"method\": \"EFECTIVO\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "15. Consultar un pedido inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 con el código ORDER_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"ORDER_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{ordersUrl}}/api/orders/ord_no-existe",
+            "description": ""
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -1923,6 +2511,34 @@
     },
     {
       "key": "bombillaId",
+      "value": ""
+    },
+    {
+      "key": "pedidoRunId",
+      "value": ""
+    },
+    {
+      "key": "pedidoDocumento",
+      "value": ""
+    },
+    {
+      "key": "pedidoUserId",
+      "value": ""
+    },
+    {
+      "key": "pedidoMateId",
+      "value": ""
+    },
+    {
+      "key": "pedidoId",
+      "value": ""
+    },
+    {
+      "key": "pedidoCreado",
+      "value": ""
+    },
+    {
+      "key": "pedidoTermoId",
       "value": ""
     }
   ]

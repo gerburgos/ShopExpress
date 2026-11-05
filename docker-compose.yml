@@ -64,6 +64,8 @@ services:
       - "8083:8083"
     environment:
       SPRING_MONGODB_URI: mongodb://mongodb:27017/orders?replicaSet=rs0
+      SERVICES_USERS_URL: http://users-service:8081
+      SERVICES_CATALOG_URL: http://catalog-service:8082
     depends_on:
       mongodb:
         condition: service_healthy

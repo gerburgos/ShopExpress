@@ -6,6 +6,34 @@ spring:
     # busque al miembro "mongodb:27017" del replica set, un nombre que solo existe dentro de la red de Docker.
     # En Compose se reemplaza con SPRING_MONGODB_URI.
     uri: mongodb://localhost:27017/orders?directConnection=true
+  data:
+    mongodb:
+      # Crea al arrancar el índice único de la clave de idempotencia declarado en Order. Viene apagado por defecto, y
+      # sin él la misma clave podría crear dos pedidos (en Catálogo pasó con el SKU).
+      auto-index-creation: true
+      representation:
+        # Los importes como Decimal128, igual que en Catálogo (R-06).
+        big-decimal: decimal128
+  jackson:
+    # Las cantidades se aceptan solo como enteros JSON, como el stock en Catálogo: sin esto, "quantity": 2.5 se
+    # truncaría a 2 en silencio.
+    deserialization:
+      accept-float-as-int: false
+    mapper:
+      allow-coercion-of-scalars: false
 
 server:
   port: 8083
+
+# Valores para correr fuera de Docker. En Compose se reemplazan con los nombres de cada servicio.
+services:
+  users:
+    url: http://localhost:8081
+  catalog:
+    url: http://localhost:8082
+
+http:
+  client:
+    # Timeouts de las llamadas a los otros servicios (3.8). Sin ellos, un servicio colgado dejaría la compra esperando.
+    connect-timeout-ms: 1000
+    read-timeout-ms: 3000
