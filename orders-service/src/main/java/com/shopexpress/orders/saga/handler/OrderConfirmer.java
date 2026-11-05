@@ -12,6 +12,7 @@ import com.shopexpress.orders.model.Order;
 import com.shopexpress.orders.model.OrderStatus;
 import com.shopexpress.orders.saga.OrderContext;
 import com.shopexpress.orders.saga.OrderHandler;
+import com.shopexpress.orders.saga.Retrier;
 import com.shopexpress.orders.saga.StepFailedException;
 
 // Paso 7, el pivote de la SAGA. Hasta acá, una falla se compensa; desde que la reserva se confirma, el stock está
@@ -23,16 +24,19 @@ public class OrderConfirmer extends OrderHandler {
 	private static final Logger log = LoggerFactory.getLogger(OrderConfirmer.class);
 
 	private final CatalogClient catalogClient;
+	private final Retrier retrier;
 
-	public OrderConfirmer(CatalogClient catalogClient) {
+	public OrderConfirmer(CatalogClient catalogClient, Retrier retrier) {
 		this.catalogClient = catalogClient;
+		this.retrier = retrier;
 	}
 
 	@Override
 	protected void process(OrderContext context) {
 		Order order = context.getOrder();
 		try {
-			catalogClient.confirm(order.getId());
+			retrier.call("Pedido " + order.getId() + ": confirmar la reserva",
+					attempt -> catalogClient.confirm(order.getId()));
 		}
 		catch (RejectedException e) {
 			// La reserva se liberó antes de confirmarse, o no existe: el stock no está asegurado. El orquestador
@@ -40,9 +44,9 @@ public class OrderConfirmer extends OrderHandler {
 			throw new StepFailedException(CancellationReason.RESERVATION_LOST, e.getMessage());
 		}
 		catch (ServiceUnavailableException e) {
-			// No se sabe si la confirmación entró: no se puede compensar, porque quizás el stock ya está vendido, ni
-			// avanzar, porque quizás no. El pedido queda PROCESSING y la respuesta es 202 (F-09). La acción pendiente
-			// CONFIRM_RESERVATION que lo resuelve llega en INC-5.
+			// Se agotaron los intentos y no se sabe si la confirmación entró: no se puede compensar, porque quizás el
+			// stock ya está vendido, ni avanzar, porque quizás no. El pedido queda PROCESSING y la respuesta es 202
+			// (F-09). La acción pendiente CONFIRM_RESERVATION que lo resuelve llega en INC-5.
 			log.warn("Pedido {}: Catálogo no respondió al confirmar la reserva. Queda PROCESSING. Causa: {}",
 					order.getId(), e.getMessage());
 			context.stop();

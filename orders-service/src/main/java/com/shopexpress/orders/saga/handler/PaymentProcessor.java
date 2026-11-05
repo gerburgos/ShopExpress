@@ -15,6 +15,7 @@ import com.shopexpress.orders.payment.SimulatedOutcome;
 import com.shopexpress.orders.payment.SimulatedPaymentGateway;
 import com.shopexpress.orders.saga.OrderContext;
 import com.shopexpress.orders.saga.OrderHandler;
+import com.shopexpress.orders.saga.Retrier;
 import com.shopexpress.orders.saga.StepFailedException;
 
 // Paso 6, ProcesadorDePago en la consigna. Solo autoriza: retiene el monto sin cobrarlo. El cobro (la captura) espera
@@ -26,10 +27,12 @@ public class PaymentProcessor extends OrderHandler {
 
 	private final SimulatedPaymentGateway gateway;
 	private final MongoTemplate mongoTemplate;
+	private final Retrier retrier;
 
-	public PaymentProcessor(SimulatedPaymentGateway gateway, MongoTemplate mongoTemplate) {
+	public PaymentProcessor(SimulatedPaymentGateway gateway, MongoTemplate mongoTemplate, Retrier retrier) {
 		this.gateway = gateway;
 		this.mongoTemplate = mongoTemplate;
+		this.retrier = retrier;
 	}
 
 	@Override
@@ -40,27 +43,35 @@ public class PaymentProcessor extends OrderHandler {
 		// quedado una autorización hecha, y la reversa (3.3.4).
 		payment.setStatus(PaymentStatus.PENDING);
 		mongoTemplate.save(order);
+		Authorization authorization;
 		try {
-			Authorization authorization = gateway.authorize(order.getId(), order.getTotal(), outcome(context));
-			if (authorization.status() == Authorization.AuthorizationStatus.DECLINED) {
-				payment.setStatus(PaymentStatus.DECLINED);
-				payment.record("AUTHORIZE", "DECLINED", null);
-				// No quedó nada retenido, así que no hay que reversar: el orquestador libera la reserva y cancela
-				// (F-06).
-				throw new StepFailedException(CancellationReason.PAYMENT_DECLINED,
-						"La pasarela rechazó la autorización");
-			}
-			payment.setStatus(PaymentStatus.AUTHORIZED);
-			payment.setAuthorizationCode(authorization.authorizationCode());
-			payment.record("AUTHORIZE", "APPROVED", null);
+			// Cada intento usa el orderId como clave: si una autorización anterior entró y se perdió la respuesta, la
+			// pasarela devuelve esa misma en lugar de retener otra vez (RN-07).
+			authorization = retrier.call("Pedido " + order.getId() + ": autorizar el pago", attempt -> {
+				try {
+					return gateway.authorize(order.getId(), order.getTotal(), outcome(context));
+				}
+				catch (GatewayTimeoutException e) {
+					payment.record("AUTHORIZE", "TIMEOUT", attempt, "La pasarela no respondió");
+					throw e;
+				}
+			});
 		}
 		catch (GatewayTimeoutException e) {
-			payment.record("AUTHORIZE", "TIMEOUT", "La pasarela no respondió");
-			// Un timeout no es un rechazo: la autorización pudo haberse hecho y el monto estar retenido. Se reversa
-			// antes de cancelar (F-07). Los reintentos con la misma clave antes de rendirse llegan en INC-5.
+			// Se agotaron los intentos. Un timeout no es un rechazo: la autorización pudo haberse hecho y el monto
+			// estar retenido. Se reversa antes de cancelar (F-07).
 			reverse(order);
 			throw new StepFailedException(CancellationReason.PAYMENT_TIMEOUT, e.getMessage());
 		}
+		if (authorization.status() == Authorization.AuthorizationStatus.DECLINED) {
+			payment.setStatus(PaymentStatus.DECLINED);
+			payment.record("AUTHORIZE", "DECLINED", lastAttempt(payment, "AUTHORIZE") + 1, null);
+			// No quedó nada retenido, así que no hay que reversar: el orquestador libera la reserva y cancela (F-06).
+			throw new StepFailedException(CancellationReason.PAYMENT_DECLINED, "La pasarela rechazó la autorización");
+		}
+		payment.setStatus(PaymentStatus.AUTHORIZED);
+		payment.setAuthorizationCode(authorization.authorizationCode());
+		payment.record("AUTHORIZE", "APPROVED", lastAttempt(payment, "AUTHORIZE") + 1, null);
 	}
 
 	// Un paso posterior falló antes del pivote (la reserva se perdió, F-08): se libera la retención.
@@ -76,15 +87,23 @@ public class PaymentProcessor extends OrderHandler {
 		payment.setStatus(PaymentStatus.REVERSAL_PENDING);
 		mongoTemplate.save(order);
 		try {
-			gateway.reverse(order.getId());
+			retrier.call("Pedido " + order.getId() + ": reversar el pago", attempt -> {
+				gateway.reverse(order.getId());
+				payment.record("REVERSE", "OK", attempt, null);
+				return null;
+			});
 			payment.setStatus(PaymentStatus.REVERSED);
-			payment.record("REVERSE", "OK", null);
 		}
 		catch (RuntimeException e) {
-			// Queda REVERSAL_PENDING; la acción pendiente REVERSE_PAYMENT que lo reintenta llega en INC-5.
-			payment.record("REVERSE", "ERROR", e.getMessage());
+			// Queda REVERSAL_PENDING; la acción pendiente REVERSE_PAYMENT lo reintenta en segundo plano.
+			payment.record("REVERSE", "ERROR", 1, e.getMessage());
 			log.warn("Pedido {}: no se pudo reversar la autorización. Causa: {}", order.getId(), e.getMessage());
 		}
+	}
+
+	// El número de intento de la respuesta que llegó: uno más que los timeouts anteriores.
+	private static int lastAttempt(Payment payment, String operation) {
+		return (int) payment.getHistory().stream().filter(entry -> entry.operation().equals(operation)).count();
 	}
 
 	private static SimulatedOutcome outcome(OrderContext context) {

@@ -2232,7 +2232,7 @@
                   "pm.test(\"El pago quedó REVERSED\", () => pm.expect(pm.response.json().payment.status).to.eql(\"REVERSED\"));",
                   "pm.test(\"El historial del pago muestra cada operación con la pasarela\", () => {",
                   "    const history = pm.response.json().payment.history.map(h => [h.operation, h.result]);",
-                  "    pm.expect(history).to.eql([[\"AUTHORIZE\", \"TIMEOUT\"], [\"REVERSE\", \"OK\"]]);",
+                  "    pm.expect(history).to.eql([[\"AUTHORIZE\", \"TIMEOUT\"], [\"AUTHORIZE\", \"TIMEOUT\"], [\"AUTHORIZE\", \"TIMEOUT\"], [\"REVERSE\", \"OK\"]]);",
                   "});"
                 ]
               }
@@ -2255,7 +2255,7 @@
               }
             ],
             "url": "{{ordersUrl}}/api/orders",
-            "description": "CA-08. La pasarela autorizó pero la respuesta no llegó: el monto pudo quedar retenido. Se reversa la autorización, se libera la reserva y se cancela.",
+            "description": "CA-08. La pasarela autoriza pero la respuesta nunca llega. Se reintenta 3 veces con la misma clave (sin retener otra vez), y como no se sabe si quedó retenido, se reversa, se libera la reserva y se cancela.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{pedidoUserId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{pedidoTermoId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"payment\": {\n    \"method\": \"CREDIT_CARD\"\n  }\n}",

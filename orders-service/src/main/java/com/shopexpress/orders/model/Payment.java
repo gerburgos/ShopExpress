@@ -20,10 +20,10 @@ public class Payment {
 		this.method = method;
 	}
 
-	// Una entrada por cada operación con la pasarela (RN-14). El intento es siempre 1 por ahora: los reintentos dentro
-	// de la solicitud llegan en INC-5.
-	public void record(String operation, String result, String detail) {
-		history.add(new PaymentAttempt(operation, result, 1, Instant.now().truncatedTo(ChronoUnit.MILLIS), detail));
+	// Una entrada por cada operación con la pasarela, y por cada intento (RN-14): así se reconstruye cómo fue el pago y
+	// se explica cualquier retención o reverso.
+	public void record(String operation, String result, int attempt, String detail) {
+		history.add(new PaymentAttempt(operation, result, attempt, Instant.now().truncatedTo(ChronoUnit.MILLIS), detail));
 	}
 
 	public PaymentMethod getMethod() {

@@ -12,6 +12,7 @@ import com.shopexpress.orders.model.CancellationReason;
 import com.shopexpress.orders.model.Order;
 import com.shopexpress.orders.saga.OrderContext;
 import com.shopexpress.orders.saga.OrderHandler;
+import com.shopexpress.orders.saga.Retrier;
 import com.shopexpress.orders.saga.StepFailedException;
 
 // Paso 4, ValidadorDeStock en la consigna. Valida reservando y no consultando: una consulta puede venir de la caché y
@@ -22,16 +23,20 @@ public class StockReserver extends OrderHandler {
 	private static final Logger log = LoggerFactory.getLogger(StockReserver.class);
 
 	private final CatalogClient catalogClient;
+	private final Retrier retrier;
 
-	public StockReserver(CatalogClient catalogClient) {
+	public StockReserver(CatalogClient catalogClient, Retrier retrier) {
 		this.catalogClient = catalogClient;
+		this.retrier = retrier;
 	}
 
 	@Override
 	protected void process(OrderContext context) {
 		Order order = context.getOrder();
 		try {
-			CatalogReservation reservation = catalogClient.reserve(order.getId(), context.getRequest().items());
+			// Repetir con el mismo orderId es seguro: si la reserva anterior entró, Catálogo devuelve esa (INT-01).
+			CatalogReservation reservation = retrier.call("Pedido " + order.getId() + ": reservar el stock",
+					attempt -> catalogClient.reserve(order.getId(), context.getRequest().items()));
 			order.setItems(reservation.items());
 		}
 		catch (RejectedException e) {
@@ -47,9 +52,9 @@ public class StockReserver extends OrderHandler {
 					+ e.getCode() + " " + e.getMessage(), e);
 		}
 		catch (ServiceUnavailableException e) {
-			// No se sabe si la reserva se hizo: la respuesta pudo perderse después de que Catálogo descontara. Se
-			// libera por las dudas; si nunca llegó, la liberación deja una lápida y la reserva tardía no descuenta
-			// (F-05). Los reintentos antes de rendirse llegan en INC-5.
+			// Se agotaron los intentos y no se sabe si la reserva se hizo: la respuesta pudo perderse después de que
+			// Catálogo descontara. Se libera por las dudas; si nunca llegó, la liberación deja una lápida y la reserva
+			// tardía no descuenta (F-05).
 			releaseQuietly(order.getId());
 			throw new StepFailedException(CancellationReason.CATALOG_UNAVAILABLE, e.getMessage());
 		}
@@ -58,12 +63,16 @@ public class StockReserver extends OrderHandler {
 	// Un paso posterior falló antes del pivote: se devuelve el stock (INT-02).
 	@Override
 	public void compensate(OrderContext context) {
-		catalogClient.release(context.getOrder().getId());
+		release(context.getOrder().getId());
+	}
+
+	private void release(String orderId) {
+		retrier.call("Pedido " + orderId + ": liberar la reserva", attempt -> catalogClient.release(orderId));
 	}
 
 	private void releaseQuietly(String orderId) {
 		try {
-			catalogClient.release(orderId);
+			release(orderId);
 		}
 		catch (RuntimeException e) {
 			log.warn("Pedido {}: no se pudo liberar la reserva después de que Catálogo no respondiera. Causa: {}",

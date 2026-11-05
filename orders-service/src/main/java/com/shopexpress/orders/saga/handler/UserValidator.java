@@ -9,22 +9,28 @@ import com.shopexpress.orders.client.UsersClient;
 import com.shopexpress.orders.exception.ApiException;
 import com.shopexpress.orders.saga.OrderContext;
 import com.shopexpress.orders.saga.OrderHandler;
+import com.shopexpress.orders.saga.Retrier;
 
 // Paso 2. Sin efectos: si falla, no se persiste nada (F-02).
 @Component
 public class UserValidator extends OrderHandler {
 
 	private final UsersClient usersClient;
+	private final Retrier retrier;
 
-	public UserValidator(UsersClient usersClient) {
+	public UserValidator(UsersClient usersClient, Retrier retrier) {
 		this.usersClient = usersClient;
+		this.retrier = retrier;
 	}
 
 	@Override
 	protected void process(OrderContext context) {
 		String userId = context.getRequest().userId();
 		try {
-			usersClient.requireUser(userId);
+			retrier.call("Validar el usuario " + userId, attempt -> {
+				usersClient.requireUser(userId);
+				return null;
+			});
 		}
 		catch (RejectedException e) {
 			if (e.getStatus() == HttpStatus.NOT_FOUND.value()) {
@@ -34,7 +40,8 @@ public class UserValidator extends OrderHandler {
 			throw e;
 		}
 		catch (ServiceUnavailableException e) {
-			// Todavía no hay pedido ni nada reservado, así que no hay que compensar: se responde que se reintente.
+			// Se agotaron los intentos. Todavía no hay pedido ni nada reservado, así que no hay que compensar: se
+			// responde que se reintente.
 			throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "USERS_UNAVAILABLE",
 					"Usuarios no respondió; reintentar");
 		}

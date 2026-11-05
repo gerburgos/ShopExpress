@@ -30,28 +30,31 @@ public class SimulatedPaymentGateway {
 	}
 
 	public Authorization authorize(String orderId, BigDecimal amount, SimulatedOutcome outcome) {
-		Authorization existing = mongoTemplate.findById(orderId, Authorization.class);
-		if (existing != null) {
-			// Repetición: se responde lo mismo que la primera vez, sin retener otra vez.
-			return existing;
-		}
-		AuthorizationStatus status = outcome == SimulatedOutcome.DECLINED ? AuthorizationStatus.DECLINED
-				: AuthorizationStatus.AUTHORIZED;
-		String code = status == AuthorizationStatus.AUTHORIZED ? "auth_" + UUID.randomUUID() : null;
-		Authorization authorization;
-		try {
-			authorization = mongoTemplate.insert(new Authorization(orderId, status, code, amount));
-		}
-		catch (DuplicateKeyException e) {
-			// Otra llamada con el mismo orderId llegó primero: vale la suya.
-			authorization = mongoTemplate.findById(orderId, Authorization.class);
+		// Si ya existe, es una repetición: se responde lo mismo que la primera vez, sin retener otra vez.
+		Authorization authorization = mongoTemplate.findById(orderId, Authorization.class);
+		if (authorization == null) {
+			authorization = create(orderId, amount, outcome);
 		}
 		if (outcome == SimulatedOutcome.NO_RESPONSE) {
-			// La autorización quedó hecha, pero la respuesta "se pierde". Pedidos solo ve el timeout.
+			// La autorización quedó hecha, pero la respuesta "se pierde" en cada intento. Pedidos solo ve timeouts, y
+			// como la pasarela es idempotente, los reintentos no retienen otra vez.
 			log.info("Pasarela simulada: autorización del pedido {} hecha, pero sin respuesta", orderId);
 			throw new GatewayTimeoutException("La pasarela no respondió a la autorización del pedido " + orderId);
 		}
 		return authorization;
+	}
+
+	private Authorization create(String orderId, BigDecimal amount, SimulatedOutcome outcome) {
+		AuthorizationStatus status = outcome == SimulatedOutcome.DECLINED ? AuthorizationStatus.DECLINED
+				: AuthorizationStatus.AUTHORIZED;
+		String code = status == AuthorizationStatus.AUTHORIZED ? "auth_" + UUID.randomUUID() : null;
+		try {
+			return mongoTemplate.insert(new Authorization(orderId, status, code, amount));
+		}
+		catch (DuplicateKeyException e) {
+			// Otra llamada con el mismo orderId llegó primero: vale la suya.
+			return mongoTemplate.findById(orderId, Authorization.class);
+		}
 	}
 
 	public Authorization capture(String orderId) {
