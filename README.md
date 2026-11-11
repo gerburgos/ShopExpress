@@ -115,7 +115,7 @@ Medido el 29/10/2026, con 10 lecturas simultáneas sobre un mismo producto: **0,
   | --- | --- |
   | `POST /api/usuarios` | `POST /api/users` |
   | `GET /api/usuarios/{usuario_id}` | `GET /api/users/{userId}` |
-  | `GET /api/usuarios/exportar` *(opcional)* | No implementado |
+  | `GET /api/usuarios/exportar` *(opcional)* | `GET /api/users/export?format=json` o `csv` |
   | `POST /api/productos` | `POST /api/products` |
   | `GET /api/productos/{producto_id}` | `GET /api/products/{productId}` |
   | `POST /api/pedidos` | `POST /api/orders` |
@@ -129,7 +129,7 @@ Medido el 29/10/2026, con 10 lecturas simultáneas sobre un mismo producto: **0,
 
 - **CQRS, aplicado.** El historial de compras es un modelo de lectura separado de donde se escribe la compra: la compra se escribe en Pedidos, y en el último paso se copia a Usuarios, donde se consulta (D-09). La copia es eventualmente consistente: si Usuarios no responde, la compra aparece cuando vuelve, porque la registra el recuperador.
 - **Event Sourcing, no aplicado.** Se aplicaría al pago: en lugar de guardar su estado actual, se guardaría cada operación con la pasarela como un evento (autorizar, capturar, reversar), y el estado se calcularía leyéndolos en orden. El historial del pago (`payment.history`) ya registra esos eventos, pero como complemento del estado y no como su fuente.
-- **Seudonimización, diseñada y no implementada.** La exportación de usuarios (RF-08, opcional) sacaría el documento y el email reemplazados por un HMAC con clave secreta. Un hash simple no alcanza: un documento de 8 dígitos tiene 10⁸ valores posibles, y se revierte probándolos todos.
+- **Seudonimización, implementada.** La exportación de usuarios (RF-08, opcional) saca el documento y el email reemplazados por un HMAC-SHA256 con clave secreta, y no exporta las direcciones. Un hash simple no alcanza: un documento de 8 dígitos tiene 10⁸ valores posibles, y se revierte probándolos todos.
 
 ## Levantar y probar
 
@@ -162,7 +162,7 @@ Cada servicio responde `"status":"UP"` solo si llega a sus bases.
 
 En Postman se importan los dos archivos de `postman/` y se elige el entorno **ShopExpress local**. La colección tiene dos carpetas:
 
-- **Demo:** 8 pedidos que cuentan una compra de punta a punta. Se mandan de a uno, en orden, y cada uno explica en su descripción qué muestra.
+- **Demo:** 9 pedidos que cuentan una compra de punta a punta. Se mandan de a uno, en orden, y cada uno explica en su descripción qué muestra.
 
   | # | Pedido | Qué muestra |
   | --- | --- | --- |
@@ -173,6 +173,7 @@ En Postman se importan los dos archivos de `postman/` y se elige el entorno **Sh
   | 6 | Compra con pago rechazado | 422, y la reserva se libera |
   | 7 | Consultar el producto | Queda 1 unidad: solo la compra aprobada se llevó stock |
   | 8 | Historial de compras | Solo la compra aprobada |
+  | 9 | Exportar usuarios | El documento y el email salen seudonimizados, no en claro |
 
 - **Pruebas:** todas las verificaciones, carpeta por carpeta (Usuarios, Catálogo, Reservas y Pedidos). Se corren enteras con **Run**, y tienen que salir en verde.
 

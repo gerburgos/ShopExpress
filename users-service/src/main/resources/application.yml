@@ -27,3 +27,9 @@ server:
 cache:
   users:
     ttl-seconds: 60
+
+export:
+  # Clave secreta del HMAC con el que se seudonimizan el documento y el email en la exportación (RF-08). Este valor es
+  # solo de ejemplo, para desarrollar: con él, cualquiera que lea el repositorio podría recalcular los seudónimos. En un
+  # sistema real se pasa por la variable EXPORT_PSEUDONYMIZATION_KEY y nunca se sube al repositorio.
+  pseudonymization-key: clave-de-ejemplo-solo-para-desarrollo

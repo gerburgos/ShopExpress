@@ -308,6 +308,38 @@
             "url": "{{usersUrl}}/api/users/{{demoUserId}}/purchases",
             "description": "**Qué mostrar y qué decir.** Una sola compra: la aprobada. Las canceladas no entran. El historial vive en Usuarios y lo escribe Pedidos en el último paso: es una copia para consultar, que puede tardar en aparecer si Usuarios no respondía (consistencia eventual)."
           }
+        },
+        {
+          "name": "9. Exportar los usuarios sin datos personales",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const text = pm.response.text();",
+                  "const users = pm.response.json();",
+                  "const mine = users.find(u => u.id === pm.collectionVariables.get(\"demoUserId\"));",
+                  "pm.test(\"Responde 200 con la compradora en la lista\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(mine).to.not.eql(undefined);",
+                  "});",
+                  "pm.test(\"El documento y el email salen seudonimizados, no en claro\", () => {",
+                  "    pm.expect(mine.emailPseudonym).to.match(/^[0-9a-f]{64}$/);",
+                  "    pm.expect(mine.documentPseudonym).to.match(/^[0-9a-f]{64}$/);",
+                  "    pm.expect(text).to.not.include(\"ana.demo.\" + pm.collectionVariables.get(\"demoRunId\"));",
+                  "    pm.expect(text).to.not.include(pm.collectionVariables.get(\"demoDocumento\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersUrl}}/api/users/export?format=json",
+            "description": "RF-08, opcional en la consigna. **Qué mostrar y qué decir.** La lista de usuarios para analizar, sin datos personales: el documento y el email salen como un HMAC con clave secreta, y no se exportan las direcciones. Con un hash simple se podría revertir probando los 10⁸ documentos posibles; con la clave secreta, no. El mismo usuario da siempre el mismo seudónimo, así se pueden cruzar registros sin saber de quién son. Si sobra tiempo, mostrar en Compass a esa misma persona con el email en claro."
+          }
         }
       ]
     },
@@ -836,6 +868,97 @@
                     }
                   }
                 }
+              }
+            },
+            {
+              "name": "15. Exportar los usuarios en JSON",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const text = pm.response.text();",
+                      "const users = pm.response.json();",
+                      "const created = JSON.parse(pm.collectionVariables.get(\"createdUser\"));",
+                      "const mine = users.find(u => u.id === created.id);",
+                      "pm.test(\"Responde 200 con la lista de usuarios, que incluye al creado\", () => {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(users).to.be.an(\"array\");",
+                      "    pm.expect(mine).to.not.eql(undefined);",
+                      "});",
+                      "pm.test(\"El documento y el email salen seudonimizados\", () => {",
+                      "    pm.expect(mine.documentPseudonym).to.match(/^[0-9a-f]{64}$/);",
+                      "    pm.expect(mine.emailPseudonym).to.match(/^[0-9a-f]{64}$/);",
+                      "    pm.expect(text).to.not.include(created.email);",
+                      "    pm.expect(text).to.not.include(pm.collectionVariables.get(\"documentNumber\"));",
+                      "});",
+                      "pm.test(\"No exporta las direcciones\", () => {",
+                      "    pm.expect(text).to.not.include(\"Av. Principal\");",
+                      "    pm.expect(mine).to.not.have.property(\"addresses\");",
+                      "});",
+                      "pm.collectionVariables.set(\"exportEmailPseudonym\", mine.emailPseudonym);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{usersUrl}}/api/users/export?format=json",
+                "description": "RF-08. El documento y el email salen como un HMAC con clave secreta, no en claro, y no se exportan las direcciones."
+              }
+            },
+            {
+              "name": "16. Exportar los usuarios en CSV",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const lines = pm.response.text().split(\"\\r\\n\");",
+                      "pm.test(\"Responde 200 como text/csv, con la cabecera esperada\", () => {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"text/csv\");",
+                      "    pm.expect(lines[0]).to.eql(\"id,firstName,lastName,documentType,documentPseudonym,emailPseudonym\");",
+                      "});",
+                      "pm.test(\"El seudónimo del email es el mismo que en JSON\", () => {",
+                      "    pm.expect(pm.response.text()).to.include(pm.collectionVariables.get(\"exportEmailPseudonym\"));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{usersUrl}}/api/users/export?format=csv",
+                "description": "El mismo usuario da el mismo seudónimo en los dos formatos: así se pueden cruzar registros sin saber de quién son."
+              }
+            },
+            {
+              "name": "17. Exportar con un formato inválido",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 400 con el código VALIDATION_ERROR\", () => {",
+                      "    pm.response.to.have.status(400);",
+                      "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                      "    pm.expect(pm.response.json().message).to.include(\"format\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{usersUrl}}/api/users/export?format=xml",
+                "description": "Solo se aceptan json y csv."
               }
             }
           ]
@@ -2962,6 +3085,10 @@
     },
     {
       "key": "demoPedido",
+      "value": ""
+    },
+    {
+      "key": "exportEmailPseudonym",
       "value": ""
     }
   ]

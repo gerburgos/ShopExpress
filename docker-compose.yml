@@ -37,6 +37,9 @@ services:
       # Para medir la latencia sin caché: SPRING_CACHE_TYPE=none docker compose up -d <servicio>.
       # Sin la variable, la caché es Redis.
       SPRING_CACHE_TYPE: ${SPRING_CACHE_TYPE:-redis}
+      # Clave del HMAC de la exportación seudonimizada. El valor por defecto es de ejemplo: para un entorno real,
+      # EXPORT_PSEUDONYMIZATION_KEY=<clave propia> docker compose up -d users-service.
+      EXPORT_PSEUDONYMIZATION_KEY: ${EXPORT_PSEUDONYMIZATION_KEY:-clave-de-ejemplo-solo-para-desarrollo}
     depends_on:
       # Espera a que el replica set tenga primario; si arrancara antes, las primeras escrituras fallarían.
       mongodb:
