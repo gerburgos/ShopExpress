@@ -3,9 +3,9 @@
 | | |
 | --- | --- |
 | Proyecto | Tarea 2, NoSQL 2026: sistema de microservicios para comercio electrónico |
-| Fecha | 4 de noviembre de 2026 |
-| Versión | 1.7 |
-| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. INC-1 está implementado: el alta, la consulta y la modificación de usuarios y productos pasan la colección Postman. INC-2 está implementado: la caché con Redis, su invalidación y la lectura desde MongoDB cuando Redis cae se verificaron, y la latencia se midió con y sin caché. INC-3 está implementado: la reserva, confirmación y liberación de stock, la reposición y el script de concurrencia (CA-17). INC-4 e INC-5 están implementados: la compra recorre la cadena orquestada como SAGA, con idempotencia, reintentos, historial de compras y recuperador. Se verificaron CA-05, CA-09, CA-12, CA-15, CA-17, CA-20, CA-21 y CA-22 con scripts y caídas provocadas, y el resto con la colección Postman. Falta RF-08, que es opcional. |
+| Fecha | 11 de noviembre de 2026 |
+| Versión | 1.8 |
+| Estado | En implementación. INC-0 está terminado: el despliegue desde cero (CA-19) se verificó. INC-1 está implementado: el alta, la consulta y la modificación de usuarios y productos pasan la colección Postman. INC-2 está implementado: la caché con Redis, su invalidación y la lectura desde MongoDB cuando Redis cae se verificaron, y la latencia se midió con y sin caché. INC-3 está implementado: la reserva, confirmación y liberación de stock, la reposición y el script de concurrencia (CA-17). INC-4 e INC-5 están implementados: la compra recorre la cadena orquestada como SAGA, con idempotencia, reintentos, historial de compras y recuperador. Se verificaron CA-05, CA-09, CA-12, CA-15, CA-17, CA-20, CA-21 y CA-22 con scripts y caídas provocadas, y el resto con la colección Postman. RF-08, la exportación de usuarios con el documento y el email seudonimizados, está implementada y se verificó con la colección Postman, con un cálculo independiente del HMAC y con un cambio de clave. |
 | Ubicación | `docs/` del repositorio. Es la única versión vigente de este documento. |
 
 ## 1. Introducción
@@ -261,9 +261,13 @@ Solo las usan los servicios entre sí, por REST síncrono. Todas son idempotente
 - **Respuestas:** 200 con la lista, que puede estar vacía; 404 si el usuario no existe.
 
 **RF-08. Exportar usuarios anonimizados (seudonimización).** `GET /api/users/export?format=json` (o `csv`). Opcional en la consigna, P3.
-- El documento y el email salen seudonimizados con un HMAC con clave secreta. No alcanza con un hash simple: un documento de 8 dígitos tiene 10⁸ valores posibles y se revierte probándolos todos.
-- No se exportan las direcciones completas.
-- **Respuesta:** 200.
+- El documento y el email salen seudonimizados con un HMAC-SHA256 con clave secreta. No alcanza con un hash simple: un documento de 8 dígitos tiene 10⁸ valores posibles y se revierte probándolos todos (D-24).
+- **Qué sale por usuario:** `id`, `firstName`, `lastName` y `documentType` en claro, y `documentPseudonym` y `emailPseudonym`. El tipo de documento (`CI`, `DNI` o `PASSPORT`) no identifica a nadie, y el `id` es un UUID al azar.
+- **El seudónimo del documento** se calcula sobre el tipo y el número juntos, porque (`CI`, `1234`) y (`DNI`, `1234`) son documentos distintos (RF-01). El del email, sobre el email ya en minúsculas. El campo entra en lo que se firma, así que el mismo texto como email y como documento da seudónimos distintos.
+- **No se exportan las direcciones**: con la calle y la ciudad se identifica a una persona sin necesidad del documento.
+- **Formato:** `format=json` (por defecto) o `format=csv`. En el CSV, un valor que empieza con `=`, `+`, `-` o `@` lleva un apóstrofe adelante, para que una planilla no lo tome como fórmula.
+- **El mismo dato da siempre el mismo seudónimo**, en los dos formatos, así se pueden cruzar registros sin saber de quién son.
+- **Respuestas:** 200; 400 `VALIDATION_ERROR` si el formato no es `json` ni `csv`.
 
 **RF-11. Agregar dirección.** `POST /api/users/{userId}/addresses`. P2. CA-18.
 - **Entrada:** `street`, `city` y `postalCode`, todos obligatorios.
@@ -742,6 +746,7 @@ Los valores son iniciales y no están medidos. El lease no se configura: se calc
 | `saga.recovery.max-attempts` | 10 | Intentos del recuperador por acción pendiente, antes de marcar `requiresAttention`. |
 | `catalog.reservation.max-transaction-attempts` | 3 | Reintentos de la transacción de reserva ante un conflicto de escritura (D-04). |
 | `saga.step-delay-ms` | 0 | Demora entre pasos, solo para pruebas (CA-09, CA-12, CA-20, CA-22). |
+| `export.pseudonymization-key` | Clave de ejemplo | Clave secreta del HMAC de la exportación (RF-08). El valor del repositorio es solo de desarrollo; en un entorno real se pasa con `EXPORT_PSEUDONYMIZATION_KEY` y no se sube al repositorio. No puede estar vacía. |
 
 ## 4. Decisiones de diseño
 
@@ -772,6 +777,7 @@ Cada decisión es la base de la sección "Justificación del diseño" del README
 | D-21 | Pedidos llama a Usuarios y a Catálogo con `RestClient`, con una URL base y timeouts por servicio. Cada respuesta se traduce a una de tres salidas: el cuerpo, un rechazo definitivo (4xx) o una falla transitoria (5xx, timeout o conexión rechazada). | Viene con Spring y no suma dependencias. Cada llamada queda a la vista, y se puede mostrar qué pasa ante cada código. La traducción en tres salidas es la que usan el reintento y la SAGA para decidir. | **Interfaz con `@HttpExchange`.** Menos código, pero el manejo de errores queda en otro lugar. **OpenFeign.** Suma Spring Cloud y no agrega nada que Spring no traiga. | — |
 | D-22 | Los reintentos se escriben como un bucle explícito: en Catálogo, `TransactionTemplate` dentro de un bucle de hasta 3 intentos; en Pedidos, `Retrier`, con espera que se duplica. | El orden queda a la vista: el reintento afuera y la transacción adentro, porque una transacción abortada no se puede seguir usando. | **`@Retryable` sobre `@Transactional`.** El orden lo deciden los proxies, y si la transacción queda afuera se reintenta dentro de una ya abortada. **`withTransaction` del driver.** Reintenta por tiempo y no por cantidad, y choca con los intentos configurables. **`RetryTemplate`.** Funciona, pero hay que explicar su configuración en lugar del bucle. | R-03, R-05 |
 | D-23 | El recuperador toma un pedido con un update condicional sobre el lease vencido, y averigua si el pivote ocurrió intentando liberar la reserva. | El lease ya marca quién trabaja sobre el pedido: condicionar sobre él es atómico y no suma un campo. Liberar es seguro en los dos casos (RN-09) y responde exactamente la pregunta, sin un endpoint nuevo en Catálogo. | **Control de versiones (`@Version`) en todo el pedido.** Afecta cada guardado del orquestador para resolver algo que el lease ya resuelve. **Un endpoint para consultar la reserva.** Es otra ruta que mantener, y la respuesta puede cambiar entre la consulta y la decisión. | — |
+| D-24 | La exportación seudonimiza el documento y el email con HMAC-SHA256 con una clave secreta configurable, y no exporta las direcciones. | Es lo que la consigna pide como opcional y permite analizar los datos sin identificar a nadie. Con la clave secreta, quien tenga la exportación no puede calcular el seudónimo de un documento que él mismo inventa. El mismo dato da el mismo seudónimo, así se cruzan registros. | **Un hash simple (SHA-256).** Un documento de 8 dígitos tiene 10⁸ valores posibles, y se revierte probándolos todos. **Borrar los campos (anonimización).** Es irreversible, pero impide cruzar registros. | — |
 
 ## 5. Limitaciones conocidas
 
@@ -790,6 +796,8 @@ Cada decisión es la base de la sección "Justificación del diseño" del README
 | Con muchas operaciones simultáneas sobre un mismo producto, algunas agotan los 3 intentos de la transacción en Catálogo y responden 503 `RESERVATION_CONFLICT`. | Esa operación no se aplica y hay que repetirla. | Se midió: 100 confirmaciones y 100 liberaciones a la vez sobre un producto dieron 7 respuestas 503, con el stock correcto. Pedidos repite los 503 con espera creciente (D-17), así que no se agregó otra espera en Catálogo. |
 | Un pedido abandonado mientras Catálogo no responde se reintenta en cada pasada del recuperador, sin límite. | No llega a `requiresAttention`, que solo cuenta los intentos de las acciones pendientes. | Se resuelve solo cuando Catálogo vuelve, y el log lo muestra en cada pasada. |
 | La pasarela simulada responde al instante, también con `NO_RESPONSE`. | Los timeouts de la pasarela no se ejercitan con una espera real. | Sí se ejercitan el reintento y el reverso: el historial del pago muestra tres `AUTHORIZE TIMEOUT` y un `REVERSE OK`. |
+| La exportación (RF-08) lista todos los usuarios de una vez, sin paginar. | Con muchos usuarios, la respuesta sería grande. | Alcanza para esta escala. La evolución es paginar o ir escribiendo la respuesta de a poco. |
+| La clave del HMAC de ejemplo está en el repositorio. | Quien lea el repositorio puede recalcular los seudónimos de una exportación hecha con esa clave. | Es solo para desarrollo, y el comentario lo dice. En un sistema real la clave se pasa con una variable de entorno y no se versiona. |
 | El pago es simulado y no hay autenticación. | — | Ambos están fuera del alcance de la consigna. |
 
 ## Anexo A. Convenciones de desarrollo
@@ -856,7 +864,7 @@ La pre-entrega del jueves 5/11 muestra un avance parcial: la compra funcionando.
 | INC-4 | Mar 3 a mié 4/11 (implementado el 3 y 4/11) | RF-05 y RF-06: cadena, orquestador y pasarela simulada (autorizar, capturar y reversar), con el historial del pago. | CA-03, CA-04, CA-06, CA-07, CA-10, CA-16 |
 | — | Jue 5/11 | Pre-entrega: se muestra la compra aprobada, el pago rechazado y la falta de stock. | — |
 | INC-5 | Vie 6 a sáb 7/11 (implementado el 4/11) | Idempotencia, reintentos dentro de la solicitud, INT-04, RF-07, acciones pendientes, `requiresAttention` y `SagaRecoveryJob` con lease. | CA-05, CA-08, CA-12, CA-15, CA-20, CA-21, CA-22 |
-| INC-6 | Dom 8 a lun 9/11 | Mejoras opcionales: RF-08 y una vista del pedido y del historial del pago con el Visualizer de Postman. | RF-08 |
+| INC-6 | Dom 8 a lun 9/11 (RF-08 implementado el 10 y 11/11) | Mejoras opcionales: RF-08 y una vista del pedido y del historial del pago con el Visualizer de Postman. | RF-08 |
 | INC-7 | Mar 10/11 | README, diagramas, colección final con Newman y ensayo cronometrado de la demo. | ENT-02 a ENT-05, ENT-07, ENT-08 |
 | — | Mié 11/11 | Margen por si algo se atrasa. | — |
 | — | Jue 12/11 | Entrega final. | — |
